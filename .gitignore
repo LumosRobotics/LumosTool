@@ -1,0 +1,5 @@
+build
+build_release
+.vscode
+Release
+.DS_Store
