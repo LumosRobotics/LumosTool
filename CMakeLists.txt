@@ -37,4 +37,8 @@ enable_testing()
 
 # Add subdirectories
 
+# Build framework first (required by applications)
+add_subdirectory(src/framework)
+
+# Build applications
 add_subdirectory(src/applications/lumos)
