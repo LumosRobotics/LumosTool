@@ -10,18 +10,12 @@ namespace Lumos
 
     // Constructor
     ApplicationBase::ApplicationBase()
-        : state_(ApplicationState::CREATED)
-        , metadata_()
-        , stats_()
-        , last_error_("")
+        : state_(ApplicationState::CREATED), metadata_(), stats_(), last_error_("")
     {
     }
 
-    ApplicationBase::ApplicationBase(const std::string& name, const std::string& version)
-        : state_(ApplicationState::CREATED)
-        , metadata_()
-        , stats_()
-        , last_error_("")
+    ApplicationBase::ApplicationBase(const std::string &name, const std::string &version)
+        : state_(ApplicationState::CREATED), metadata_(), stats_(), last_error_("")
     {
         metadata_.name = name;
         metadata_.version = version;
@@ -30,7 +24,8 @@ namespace Lumos
     ApplicationBase::~ApplicationBase()
     {
         // Ensure cleanup happens if not already done
-        if (state_ == ApplicationState::INITIALIZED || state_ == ApplicationState::RUNNING) {
+        if (state_ == ApplicationState::INITIALIZED || state_ == ApplicationState::RUNNING)
+        {
             LogWarning("Application destroyed without proper shutdown, calling DeInit()");
             Shutdown();
         }
@@ -39,12 +34,14 @@ namespace Lumos
     // Framework lifecycle management
     void ApplicationBase::Initialize()
     {
-        if (state_ != ApplicationState::CREATED && state_ != ApplicationState::STOPPED) {
+        if (state_ != ApplicationState::CREATED && state_ != ApplicationState::STOPPED)
+        {
             LogWarning("Initialize() called in invalid state, ignoring");
             return;
         }
 
-        try {
+        try
+        {
             LogInfo("Initializing application: " + metadata_.name);
 
             state_ = ApplicationState::INITIALIZED;
@@ -55,10 +52,14 @@ namespace Lumos
             stats_.init_count++;
 
             LogInfo("Application initialized successfully");
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             SetError(std::string("Exception during Init(): ") + e.what());
             LogError("Initialization failed: " + last_error_);
-        } catch (...) {
+        }
+        catch (...)
+        {
             SetError("Unknown exception during Init()");
             LogError("Initialization failed: " + last_error_);
         }
@@ -66,18 +67,22 @@ namespace Lumos
 
     void ApplicationBase::Execute()
     {
-        if (state_ != ApplicationState::INITIALIZED && state_ != ApplicationState::RUNNING) {
-            if (!HasError()) {
+        if (state_ != ApplicationState::INITIALIZED && state_ != ApplicationState::RUNNING)
+        {
+            if (!HasError())
+            {
                 LogError("Execute() called before Initialize() or after Shutdown()");
             }
             return;
         }
 
-        if (state_ == ApplicationState::INITIALIZED) {
+        if (state_ == ApplicationState::INITIALIZED)
+        {
             state_ = ApplicationState::RUNNING;
         }
 
-        try {
+        try
+        {
             // Measure execution time
             uint64_t start_time = GetCurrentTimeUs();
 
@@ -90,11 +95,14 @@ namespace Lumos
             // Update statistics
             stats_.step_count++;
             UpdateStepTiming(step_time);
-
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             SetError(std::string("Exception during Step(): ") + e.what());
             LogError("Step execution failed: " + last_error_);
-        } catch (...) {
+        }
+        catch (...)
+        {
             SetError("Unknown exception during Step()");
             LogError("Step execution failed: " + last_error_);
         }
@@ -102,12 +110,14 @@ namespace Lumos
 
     void ApplicationBase::Shutdown()
     {
-        if (state_ == ApplicationState::STOPPED) {
+        if (state_ == ApplicationState::STOPPED)
+        {
             LogWarning("Shutdown() called on already stopped application");
             return;
         }
 
-        try {
+        try
+        {
             LogInfo("Shutting down application: " + metadata_.name);
 
             // Call user implementation
@@ -119,25 +129,29 @@ namespace Lumos
             LogInfo("Application shut down successfully");
 
             // Print statistics if any steps were executed
-            if (stats_.step_count > 0) {
+            if (stats_.step_count > 0)
+            {
                 LogInfo("Application statistics:");
                 LogInfo("  Total steps: " + std::to_string(stats_.step_count));
                 LogInfo("  Average step time: " + std::to_string(stats_.GetAverageStepTimeUs()) + " us");
                 LogInfo("  Min step time: " + std::to_string(stats_.min_step_time_us) + " us");
                 LogInfo("  Max step time: " + std::to_string(stats_.max_step_time_us) + " us");
             }
-
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             SetError(std::string("Exception during DeInit(): ") + e.what());
             LogError("Shutdown failed: " + last_error_);
-        } catch (...) {
+        }
+        catch (...)
+        {
             SetError("Unknown exception during DeInit()");
             LogError("Shutdown failed: " + last_error_);
         }
     }
 
     // Error handling
-    void ApplicationBase::SetError(const std::string& error_msg)
+    void ApplicationBase::SetError(const std::string &error_msg)
     {
         last_error_ = error_msg;
         state_ = ApplicationState::ERROR;
@@ -147,42 +161,46 @@ namespace Lumos
     void ApplicationBase::ClearError()
     {
         last_error_.clear();
-        if (state_ == ApplicationState::ERROR) {
+        if (state_ == ApplicationState::ERROR)
+        {
             state_ = ApplicationState::STOPPED;
         }
     }
 
     // Logging helpers
-    void ApplicationBase::LogInfo(const std::string& message)
+    void ApplicationBase::LogInfo(const std::string &message)
     {
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()) % 1000;
+                      now.time_since_epoch()) %
+                  1000;
 
         std::cout << "[" << std::put_time(std::localtime(&time), "%H:%M:%S")
                   << "." << std::setfill('0') << std::setw(3) << ms.count()
                   << "] [" << metadata_.name << "] [INFO] " << message << std::endl;
     }
 
-    void ApplicationBase::LogWarning(const std::string& message)
+    void ApplicationBase::LogWarning(const std::string &message)
     {
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()) % 1000;
+                      now.time_since_epoch()) %
+                  1000;
 
         std::cout << "[" << std::put_time(std::localtime(&time), "%H:%M:%S")
                   << "." << std::setfill('0') << std::setw(3) << ms.count()
                   << "] [" << metadata_.name << "] [WARN] " << message << std::endl;
     }
 
-    void ApplicationBase::LogError(const std::string& message)
+    void ApplicationBase::LogError(const std::string &message)
     {
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()) % 1000;
+                      now.time_since_epoch()) %
+                  1000;
 
         std::cerr << "[" << std::put_time(std::localtime(&time), "%H:%M:%S")
                   << "." << std::setfill('0') << std::setw(3) << ms.count()
@@ -194,11 +212,13 @@ namespace Lumos
     {
         stats_.total_step_time_us += step_time_us;
 
-        if (step_time_us > stats_.max_step_time_us) {
+        if (step_time_us > stats_.max_step_time_us)
+        {
             stats_.max_step_time_us = step_time_us;
         }
 
-        if (step_time_us < stats_.min_step_time_us) {
+        if (step_time_us < stats_.min_step_time_us)
+        {
             stats_.min_step_time_us = step_time_us;
         }
     }

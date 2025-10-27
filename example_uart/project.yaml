@@ -1,0 +1,8 @@
+sources:
+  - src/main.c
+  - src/uart_config.c
+
+hal_modules:
+  - uart
+
+board: LumosBrain

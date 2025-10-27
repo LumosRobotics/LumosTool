@@ -1,0 +1,4 @@
+sources:
+  - main.cpp
+  - source_file.cpp
+board: LumosBrain

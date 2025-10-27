@@ -37,8 +37,5 @@ enable_testing()
 
 # Add subdirectories
 
-# Build framework first (required by applications)
-add_subdirectory(src/framework)
-
-# Build applications
-add_subdirectory(src/applications/lumos)
+# Build simple lumos CLI tool (for STM32 builds)
+add_subdirectory(src/applications/lumos_simple)

@@ -1,0 +1,8 @@
+sources:
+  - src/main.c
+  - src/i2c_config.c
+
+hal_modules:
+  - i2c
+
+board: LumosBrain

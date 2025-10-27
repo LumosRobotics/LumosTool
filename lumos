@@ -1,0 +1,22 @@
+#!/bin/bash
+# Lumos CLI wrapper script
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Path to the actual lumos_simple executable
+LUMOS_EXEC="$SCRIPT_DIR/build/src/applications/lumos_simple/lumos_simple"
+
+# Check if the executable exists
+if [ ! -f "$LUMOS_EXEC" ]; then
+    echo "Error: lumos_simple executable not found at: $LUMOS_EXEC"
+    echo "Please build it first:"
+    echo "  cd $SCRIPT_DIR"
+    echo "  mkdir build && cd build"
+    echo "  cmake .."
+    echo "  make lumos_simple"
+    exit 1
+fi
+
+# Forward all arguments to the actual executable
+exec "$LUMOS_EXEC" "$@"
