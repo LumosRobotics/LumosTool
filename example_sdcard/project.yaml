@@ -1,5 +1,6 @@
 sources:
   - src/main.c
-  - src/i2c_config.c
+  - src/sdcard.c
+  - src/spi_config.c
 
 board: LumosBrain

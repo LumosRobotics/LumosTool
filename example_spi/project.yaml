@@ -2,7 +2,4 @@ sources:
   - src/main.c
   - src/spi_config.c
 
-hal_modules:
-  - spi
-
 board: LumosBrain

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "project_config.h"
+#include "hal_module_detector.h"
 #include <string>
 #include <vector>
 
@@ -27,6 +28,7 @@ private:
     std::string GetStartupFile(const BoardConfig& board) const;
     std::string GetSystemFile(const BoardConfig& board) const;
     std::vector<std::string> GetRequiredHALFiles(const BoardConfig& board, const std::vector<std::string>& hal_modules) const;
+    std::vector<std::string> GetUSBMiddlewareFiles(const BoardConfig& board) const;
 
     bool CompileFile(const std::string& source_file,
                     const std::string& output_file,

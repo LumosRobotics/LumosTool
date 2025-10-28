@@ -5,3 +5,4 @@
  * Be able to specify memory regions, and place functions and data in those regions
  * Want to keep platform open, but also be able to build board specific projects
  * Flash with "lumos flash"
+ * If the user uses outside of the lumos ecosystem, should the abstraction layer still be usable?

@@ -51,6 +51,10 @@ std::vector<std::string> Builder::GetIncludePaths(const BoardConfig& board, cons
         includes.push_back(platform_path + "/Drivers/STM32G4xx_HAL_Driver/Inc");
     }
 
+    // Add USB Middleware includes if needed
+    includes.push_back(platform_path + "/Middlewares/ST/STM32_USB_Device_Library/Core/Inc");
+    includes.push_back(platform_path + "/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc");
+
     return includes;
 }
 
@@ -167,9 +171,34 @@ std::vector<std::string> Builder::GetRequiredHALFiles(const BoardConfig& board, 
         if (fs::exists(module_ex_file)) {
             hal_files.push_back(module_ex_file);
         }
+
+        // Special case: PCD module needs LL USB driver
+        if (module == "pcd") {
+            std::string ll_usb_file = hal_driver_path + "/" + prefix.substr(0, prefix.find("_hal")) + "_ll_usb.c";
+            if (fs::exists(ll_usb_file)) {
+                hal_files.push_back(ll_usb_file);
+            }
+        }
     }
 
     return hal_files;
+}
+
+std::vector<std::string> Builder::GetUSBMiddlewareFiles(const BoardConfig& board) const {
+    std::string platform_path = GetPlatformPath(board.platform);
+    std::string usb_core_path = platform_path + "/Middlewares/ST/STM32_USB_Device_Library/Core/Src";
+    std::string usb_cdc_path = platform_path + "/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src";
+
+    std::vector<std::string> usb_files = {
+        // USB Device Core files
+        usb_core_path + "/usbd_core.c",
+        usb_core_path + "/usbd_ctlreq.c",
+        usb_core_path + "/usbd_ioreq.c",
+        // USB CDC Class file
+        usb_cdc_path + "/usbd_cdc.c"
+    };
+
+    return usb_files;
 }
 
 std::vector<std::string> Builder::GetLinkerFlags(const BoardConfig& board, const std::string& project_dir) const {
@@ -296,6 +325,35 @@ bool Builder::Build(const std::string& project_dir) {
 
     std::cout << "Board: " << project.board << std::endl;
     std::cout << "Sources: " << project.sources.size() << " files" << std::endl;
+
+    // Auto-detect HAL modules if not specified
+    if (project.hal_modules.empty()) {
+        std::cout << "Auto-detecting HAL modules from source files..." << std::endl;
+        HALModuleDetector detector;
+        project.hal_modules = detector.DetectModules(project.sources, project_dir);
+
+        if (!project.hal_modules.empty()) {
+            std::cout << "Detected modules: ";
+            for (size_t i = 0; i < project.hal_modules.size(); ++i) {
+                std::cout << project.hal_modules[i];
+                if (i < project.hal_modules.size() - 1) {
+                    std::cout << ", ";
+                }
+            }
+            std::cout << std::endl;
+        } else {
+            std::cout << "No HAL modules detected (using core modules only)" << std::endl;
+        }
+    } else {
+        std::cout << "Using manually specified HAL modules: ";
+        for (size_t i = 0; i < project.hal_modules.size(); ++i) {
+            std::cout << project.hal_modules[i];
+            if (i < project.hal_modules.size() - 1) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << std::endl;
+    }
     std::cout << std::endl;
 
     // Get board configuration
@@ -353,6 +411,40 @@ bool Builder::Build(const std::string& project_dir) {
         object_files.push_back(obj_path);
     }
     std::cout << std::endl;
+
+    // Compile USB middleware files if needed
+    bool uses_usb = false;
+    for (const auto& module : project.hal_modules) {
+        if (module == "pcd" || module == "pcd_ex") {
+            uses_usb = true;
+            break;
+        }
+    }
+
+    if (uses_usb) {
+        std::cout << "Compiling USB middleware..." << std::endl;
+        std::vector<std::string> usb_files = GetUSBMiddlewareFiles(board);
+        for (const auto& usb_file : usb_files) {
+            if (!fs::exists(usb_file)) {
+                std::cout << "  Skipping " << fs::path(usb_file).filename().string() << " (not found)" << std::endl;
+                continue;
+            }
+
+            std::string usb_filename = fs::path(usb_file).filename().string();
+            std::string obj_name = fs::path(usb_file).stem().string() + ".o";
+            std::string obj_path = build_dir + "/" + obj_name;
+
+            std::cout << "  " << usb_filename << " -> " << obj_name << std::endl;
+
+            if (!CompileFile(usb_file, obj_path, board, project_dir)) {
+                std::cerr << "Error: Failed to compile USB file " << usb_filename << std::endl;
+                return false;
+            }
+
+            object_files.push_back(obj_path);
+        }
+        std::cout << std::endl;
+    }
 
     // Compile system files
     std::cout << "Compiling system files..." << std::endl;

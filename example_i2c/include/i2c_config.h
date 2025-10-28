@@ -1,6 +1,7 @@
 #pragma once
 
 #include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_i2c.h"
 
 // I2C Configuration
 #define I2C_INSTANCE            I2C1

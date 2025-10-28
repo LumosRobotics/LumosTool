@@ -1,0 +1,8 @@
+sources:
+  - src/main.c
+  - src/usb_device.c
+  - src/usbd_conf.c
+  - src/usbd_desc.c
+  - src/usbd_cdc_if.c
+
+board: LumosBrain
