@@ -6,3 +6,6 @@
  * Want to keep platform open, but also be able to build board specific projects
  * Flash with "lumos flash"
  * If the user uses outside of the lumos ecosystem, should the abstraction layer still be usable?
+
+# To add the tool to path for fish shell
+fish_add_path /Users/danielpi/work/LumosTool/build/src/applications/lumos_simple

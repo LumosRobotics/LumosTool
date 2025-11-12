@@ -1,0 +1,18 @@
+MCU: STM32H723VGT6
+MAX_CPU: 550 MHz
+Memory:
+  Flash: 1024
+  RAM: 564
+USB:
+  PA12: "USB DP"
+  PA11: "USB DN"
+USB_SERIAL:
+  PC7: "CP_TX, so should be STM32 RX"
+  PC6: "CP_RX, so should be STM32 TX"
+SD_CARD:
+  PD2: "CMD"
+  PC12: "CK"
+  PC11: "D3"
+  PC10: "D2"
+  PC9: "D1"
+  PC8: "D0"

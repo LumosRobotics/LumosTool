@@ -5,3 +5,4 @@
  * Debug the project
  * Manage dependencies
  * Create interface layer
+ * "lumos" will be simple tool, "lx" will be more advanced tool
