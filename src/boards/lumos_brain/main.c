@@ -99,8 +99,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USB_OTG_HS_PCD_Init();
-  MX_SDMMC1_SD_Init();
+  // Note: USB and SD card initialization commented out for simple projects
+  // Uncomment if your project needs these peripherals
+  // MX_USB_OTG_HS_PCD_Init();
+  // MX_SDMMC1_SD_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */

@@ -18,6 +18,7 @@ private:
 
     std::string GetToolchainPath() const;
     std::string GetPlatformPath(const std::string& platform) const;
+    std::string GetBoardPath(const std::string& board_name) const;
 
     std::vector<std::string> GetIncludePaths(const BoardConfig& board, const std::string& project_dir) const;
     std::vector<std::string> GetDefines(const BoardConfig& board) const;
@@ -27,6 +28,7 @@ private:
     std::string GetLinkerScript(const BoardConfig& board) const;
     std::string GetStartupFile(const BoardConfig& board) const;
     std::string GetSystemFile(const BoardConfig& board) const;
+    std::vector<std::string> GetBoardSupportFiles(const BoardConfig& board) const;
     std::vector<std::string> GetRequiredHALFiles(const BoardConfig& board, const std::vector<std::string>& hal_modules) const;
     std::vector<std::string> GetUSBMiddlewareFiles(const BoardConfig& board) const;
 
@@ -43,6 +45,10 @@ private:
     bool CreateBinary(const std::string& elf_file, const std::string& bin_file) const;
 
     bool RunCommand(const std::string& command) const;
+
+    bool CheckAndCreateMainFile(const std::string& project_dir, ProjectConfig& project);
+    std::string PromptLanguage() const;
+    bool GenerateMainFile(const std::string& language, const std::string& project_dir) const;
 };
 
 } // namespace Lumos

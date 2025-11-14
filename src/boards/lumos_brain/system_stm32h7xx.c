@@ -436,6 +436,16 @@ void SystemCoreClockUpdate (void)
 #endif /* DUAL_CORE && CORE_CM4 */
 }
 
+/**
+  * @brief  Exit from Run0 mode. Required by STM32H7 startup code.
+  * @retval None
+  */
+void ExitRun0Mode(void)
+{
+  /* This function is called by the startup code to exit RUN mode 0 */
+  /* For STM32H723, we don't need any special handling here */
+  /* The function is provided to satisfy the startup code requirements */
+}
 
 /**
   * @}

@@ -1,19 +1,39 @@
 #include "project_config.h"
 #include <yaml-cpp/yaml.h>
 #include <iostream>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace Lumos {
 
-bool ProjectConfig::Load(const std::string& yaml_path) {
+bool ProjectConfig::Load(const std::string& yaml_path, const std::string& project_dir) {
     try {
         YAML::Node config = YAML::LoadFile(yaml_path);
 
         // Load sources
         if (config["sources"]) {
+            // Use explicitly specified sources
             sources = config["sources"].as<std::vector<std::string>>();
         } else {
-            std::cerr << "Error: 'sources' field not found in " << yaml_path << std::endl;
-            return false;
+            // Auto-discover all .c and .cpp files in the project directory
+            std::cout << "No 'sources' key found, auto-discovering .c and .cpp files..." << std::endl;
+
+            std::error_code ec;
+            for (const auto& entry : fs::directory_iterator(project_dir, ec)) {
+                if (entry.is_regular_file()) {
+                    std::string extension = entry.path().extension().string();
+                    if (extension == ".c" || extension == ".cpp") {
+                        sources.push_back(entry.path().filename().string());
+                    }
+                }
+            }
+
+            if (sources.empty()) {
+                std::cout << "  No source files found yet (will be created if needed)" << std::endl;
+            } else {
+                std::cout << "  Found " << sources.size() << " source file(s)" << std::endl;
+            }
         }
 
         // Load board

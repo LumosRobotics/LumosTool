@@ -1,15 +1,21 @@
 # STM32H7 Simple Example
 
-This is the most basic example project for the Lumos build tool. It demonstrates the absolute minimum required to run code on an STM32H7 microcontroller without using any peripherals.
+This is the most basic example project for the Lumos build tool. It demonstrates the minimum code structure using the Arduino-style `setup()` and `loop()` pattern.
 
 ## What It Does
 
 This example:
-- Initializes the HAL library
-- Configures the system clock to run at 550 MHz
-- Runs a simple infinite loop with a counter
+- Implements `setup()` - called once after board initialization
+- Implements `loop()` - called repeatedly in an infinite loop
+- Increments a counter with delays
 
 **No peripherals are used** - no UART, no GPIO, no LEDs, nothing. Just the core CPU running.
+
+The board support files (from `/src/boards/lumos_brain/`) automatically handle:
+- HAL initialization
+- System clock configuration @ 550 MHz
+- MPU configuration
+- USB and SD card initialization
 
 ## Why This Example?
 
@@ -104,47 +110,62 @@ To verify the code is running, you can:
 
 ## Code Structure
 
-### main.cpp
+### main.cpp (User Code)
 
-**SystemClock_Config()**
-- Configures the PLL to run at 550 MHz
-- Uses HSE (25 MHz external crystal)
-- Sets up voltage scaling for maximum performance
+**setup()**
+- Called once after board initialization
+- Use this to initialize your application state
+- Configure peripherals, set up variables, etc.
 
-**main()**
-- Initializes HAL
-- Configures clocks
-- Runs infinite loop with counter
+**loop()**
+- Called repeatedly in an infinite loop
+- Contains your main application logic
+- Runs at full CPU speed (no built-in delays)
 
 **SimpleDelay()**
-- Software delay function
+- Software delay function for demonstration
 - Not precise, just for demonstration
+
+### Board Support Files (Automatic)
+
+The build system automatically includes these from `/src/boards/lumos_brain/`:
+- **main.c** - Contains the actual `main()` that calls `setup()` once, then `loop()` repeatedly
+- **system_stm32h7xx.c** - System and clock initialization
+- **stm32h7xx_hal_msp.c** - HAL MSP callbacks
+- **stm32h7xx_it.c** - Interrupt handlers
+- **syscalls.c** - Newlib syscalls
+- **sysmem.c** - Memory management
+
+## User Code Structure
+
+Your code only needs to include `lumos.h` and define two functions:
+
+```cpp
+#include "lumos.h"
+
+void setup(void)
+{
+    // Initialize peripherals
+    // Set up GPIO, UART, etc.
+}
+
+void loop(void)
+{
+    // Your application code here
+    // This runs repeatedly
+}
+```
+
+**That's it!** No `extern "C"`, no manual includes - `lumos.h` handles everything.
 
 ## Customization
 
 ### Change Clock Speed
 
-Edit the PLL configuration in `SystemClock_Config()`:
-
-```cpp
-RCC_OscInitStruct.PLL.PLLN = 192;  // Change this value
-RCC_OscInitStruct.PLL.PLLP = 2;    // And/or this
-```
-
-Formula: `SYSCLK = (HSE / PLLM) * PLLN / PLLP`
-
-### Add Your Code
-
-Add your application logic in the `while(1)` loop:
-
-```cpp
-while (1)
-{
-    // Your code here
-    counter++;
-    SimpleDelay(50000000);
-}
-```
+The clock is configured in the board's `main.c`. To modify:
+1. Edit `/src/boards/lumos_brain/main.c`
+2. Modify the `SystemClock_Config()` function
+3. Rebuild (all projects using LumosBrain will use the new clock)
 
 ### Add Peripherals
 

@@ -10,7 +10,7 @@ struct ProjectConfig {
     std::string board;
     std::vector<std::string> hal_modules;  // Optional: uart, spi, i2c, adc, etc.
 
-    bool Load(const std::string& yaml_path);
+    bool Load(const std::string& yaml_path, const std::string& project_dir);
 };
 
 struct BoardConfig {
