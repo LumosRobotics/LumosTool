@@ -85,14 +85,17 @@ void GenerateMainFile(const std::string& language, const fs::path& project_dir) 
         throw std::runtime_error("Failed to create " + filename);
     }
 
+    const std::string loop_declaration = (language == "C") ? "void loop(void)" : "void loop()";
+    const std::string setup_declaration = (language == "C") ? "void setup(void)" : "void setup()";
+
     file << "/**\n";
-    file << " * @file " << filename << "\n";
-    file << " * @brief Main application file\n";
+    file << " * Main application file\n";
+    file << " * This is where the setup() and loop() functions are defined\n";
     file << " */\n\n";
     file << "/**\n";
-    file << " * @brief Setup function - called once at startup\n";
+    file << " * Setup function - called once at startup\n";
     file << " */\n";
-    file << "void setup(void)\n";
+    file << setup_declaration << "\n";
     file << "{\n";
     file << "    // Initialize your application here\n";
     file << "    // - Configure GPIO pins\n";
@@ -100,9 +103,9 @@ void GenerateMainFile(const std::string& language, const fs::path& project_dir) 
     file << "    // - Set up timers\n";
     file << "}\n\n";
     file << "/**\n";
-    file << " * @brief Loop function - called repeatedly\n";
+    file << " * Loop function - called repeatedly\n";
     file << " */\n";
-    file << "void loop(void)\n";
+    file << loop_declaration << "\n";
     file << "{\n";
     file << "    // Your main application logic here\n";
     file << "    // This function runs continuously\n";

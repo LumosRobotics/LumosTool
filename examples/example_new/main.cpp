@@ -1,12 +1,12 @@
 /**
- * @file main.cpp
- * @brief Main application file
+ * Main application file
+ * This is where the setup() and loop() functions are defined
  */
 
 /**
- * @brief Setup function - called once at startup
+ * Setup function - called once at startup
  */
-void setup(void)
+void setup()
 {
     // Initialize your application here
     // - Configure GPIO pins
@@ -15,9 +15,9 @@ void setup(void)
 }
 
 /**
- * @brief Loop function - called repeatedly
+ * Loop function - called repeatedly
  */
-void loop(void)
+void loop()
 {
     // Your main application logic here
     // This function runs continuously
