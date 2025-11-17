@@ -365,15 +365,13 @@ bool Serial::PulseRTS(int duration_ms, bool active_low) {
 std::vector<std::string> Serial::ListPorts() {
     std::vector<std::string> ports;
 
-    // Linux: Check /dev/ttyUSB*, /dev/ttyACM*, /dev/ttyS*
+    // macOS: Check /dev/tty.* and /dev/cu.*
     DIR* dir = opendir("/dev");
     if (dir) {
         struct dirent* entry;
         while ((entry = readdir(dir)) != NULL) {
             std::string name = entry->d_name;
-            if (name.find("ttyUSB") == 0 ||
-                name.find("ttyACM") == 0 ||
-                name.find("ttyS") == 0) {
+            if (name.find("tty.") == 0 || name.find("cu.") == 0) {
                 ports.push_back("/dev/" + name);
             }
         }
@@ -381,6 +379,26 @@ std::vector<std::string> Serial::ListPorts() {
     }
 
     return ports;
+}
+
+PortStatus Serial::CheckPortStatus(const std::string& port_name) {
+    // Try non-blocking open to check availability
+    int fd = open(port_name.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
+
+    if (fd != -1) {
+        // Port is available, close it immediately
+        close(fd);
+        return PortStatus::AVAILABLE;
+    }
+
+    // Check why it failed
+    if (errno == EBUSY) {
+        return PortStatus::IN_USE;
+    } else if (errno == EACCES || errno == EPERM) {
+        return PortStatus::NO_PERMISSION;
+    }
+
+    return PortStatus::UNKNOWN_ERROR;
 }
 
 bool Serial::ConfigurePort() {

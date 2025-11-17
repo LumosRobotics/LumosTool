@@ -383,6 +383,26 @@ std::vector<std::string> Serial::ListPorts() {
     return ports;
 }
 
+PortStatus Serial::CheckPortStatus(const std::string& port_name) {
+    // Try non-blocking open to check availability
+    int fd = open(port_name.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
+
+    if (fd != -1) {
+        // Port is available, close it immediately
+        close(fd);
+        return PortStatus::AVAILABLE;
+    }
+
+    // Check why it failed
+    if (errno == EBUSY) {
+        return PortStatus::IN_USE;
+    } else if (errno == EACCES || errno == EPERM) {
+        return PortStatus::NO_PERMISSION;
+    }
+
+    return PortStatus::UNKNOWN_ERROR;
+}
+
 bool Serial::ConfigurePort() {
     struct termios tty;
     memset(&tty, 0, sizeof(tty));

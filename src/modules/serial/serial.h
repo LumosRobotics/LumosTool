@@ -7,6 +7,16 @@
 namespace SimpleSerial {
 
 /**
+ * @brief Serial port status
+ */
+enum class PortStatus {
+    AVAILABLE,      // Port can be opened
+    IN_USE,         // Port is currently in use by another process
+    NO_PERMISSION,  // User lacks permission to access the port
+    UNKNOWN_ERROR   // Other error occurred
+};
+
+/**
  * @brief Serial port configuration
  */
 struct SerialConfig {
@@ -172,6 +182,13 @@ public:
      * @return Vector of port names
      */
     static std::vector<std::string> ListPorts();
+
+    /**
+     * @brief Check the status of a serial port without fully opening it
+     * @param port_name Name of the port to check
+     * @return Status of the port
+     */
+    static PortStatus CheckPortStatus(const std::string& port_name);
 
 private:
     // Platform-specific handle

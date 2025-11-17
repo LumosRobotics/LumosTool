@@ -35,6 +35,7 @@ void PrintUsage() {
     std::cout << "  build              Build the project in current directory" << std::endl;
     std::cout << "  flash [port]       Flash firmware to STM32 (auto-detects port if not specified)" << std::endl;
     std::cout << "  monitor [port]     Monitor serial output from MCU" << std::endl;
+    std::cout << "  reset <port>       Reset/unstick a serial port" << std::endl;
     std::cout << "  ports              List available serial ports" << std::endl;
     std::cout << "  --help, -h         Show this help message" << std::endl;
     std::cout << "  --version, -v      Show version" << std::endl;
@@ -45,6 +46,7 @@ void PrintUsage() {
     std::cout << "  lumos build" << std::endl;
     std::cout << "  lumos flash" << std::endl;
     std::cout << "  lumos monitor" << std::endl;
+    std::cout << "  lumos reset /dev/ttyUSB0" << std::endl;
 }
 
 void PrintVersion() {
@@ -418,9 +420,83 @@ int main(int argc, char** argv) {
         } else {
             std::cout << "Available serial ports:" << std::endl;
             for (const auto& port : ports) {
-                std::cout << "  " << port << std::endl;
+                // Check port status
+                auto status = SimpleSerial::Serial::CheckPortStatus(port);
+                std::string status_str;
+
+                switch (status) {
+                    case SimpleSerial::PortStatus::AVAILABLE:
+                        status_str = "\033[32m[Available]\033[0m";  // Green
+                        break;
+                    case SimpleSerial::PortStatus::IN_USE:
+                        status_str = "\033[33m[In Use]\033[0m";     // Yellow
+                        break;
+                    case SimpleSerial::PortStatus::NO_PERMISSION:
+                        status_str = "\033[31m[No Permission]\033[0m";  // Red
+                        break;
+                    case SimpleSerial::PortStatus::UNKNOWN_ERROR:
+                        status_str = "\033[90m[Unknown]\033[0m";    // Gray
+                        break;
+                }
+
+                std::cout << "  " << port << "  " << status_str << std::endl;
             }
         }
+        return 0;
+    }
+
+    if (command == "reset") {
+        if (argc < 3) {
+            std::cerr << "Error: Port name required for reset command" << std::endl;
+            std::cerr << "Usage: lumos reset <port>" << std::endl;
+            std::cerr << "Example: lumos reset /dev/ttyUSB0" << std::endl;
+            return 1;
+        }
+
+        std::string port_name = argv[2];
+
+        std::cout << "Resetting serial port: " << port_name << std::endl;
+
+        // Open the port with standard configuration
+        SimpleSerial::Serial serial;
+        SimpleSerial::SerialConfig config;
+        config.baud_rate = 115200;
+        config.timeout_ms = 1000;
+
+        std::cout << "Opening port..." << std::endl;
+        if (!serial.Open(port_name, config)) {
+            std::cerr << "Failed to open port: " << serial.GetLastError() << std::endl;
+            std::cerr << "Tip: Check if the port exists and you have permission to access it" << std::endl;
+            return 1;
+        }
+
+        std::cout << "Port opened successfully" << std::endl;
+
+        // Reset DTR and RTS to low state
+        std::cout << "Resetting DTR and RTS lines..." << std::endl;
+        if (!serial.SetDTR(false)) {
+            std::cerr << "Warning: Failed to reset DTR: " << serial.GetLastError() << std::endl;
+        }
+        if (!serial.SetRTS(false)) {
+            std::cerr << "Warning: Failed to reset RTS: " << serial.GetLastError() << std::endl;
+        }
+
+        // Flush buffers
+        std::cout << "Flushing buffers..." << std::endl;
+        if (!serial.Flush()) {
+            std::cerr << "Warning: Failed to flush buffers" << std::endl;
+        }
+
+        // Small delay to let things settle
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // Close the port
+        std::cout << "Closing port..." << std::endl;
+        serial.Close();
+
+        std::cout << "✓ Port reset complete!" << std::endl;
+        std::cout << "The port should now be in a clean state." << std::endl;
+
         return 0;
     }
 

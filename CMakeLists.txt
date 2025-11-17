@@ -37,6 +37,9 @@ enable_testing()
 
 # Add subdirectories
 
+# Build shared modules
+add_subdirectory(src/modules/serial)
+
 # Build simple lumos CLI tool (for STM32 builds)
 add_subdirectory(src/applications/lumos_simple)
 add_subdirectory(src/applications/simple_serial)

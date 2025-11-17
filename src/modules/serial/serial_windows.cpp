@@ -342,6 +342,35 @@ std::vector<std::string> Serial::ListPorts() {
     return ports;
 }
 
+PortStatus Serial::CheckPortStatus(const std::string& port_name) {
+    // Try to open the port in shared mode to check availability
+    HANDLE h = CreateFileA(
+        port_name.c_str(),
+        GENERIC_READ | GENERIC_WRITE,
+        0,  // No sharing - exclusive access
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+
+    if (h != INVALID_HANDLE_VALUE) {
+        // Port is available, close it immediately
+        CloseHandle(h);
+        return PortStatus::AVAILABLE;
+    }
+
+    // Check why it failed
+    DWORD error = GetLastError();
+    if (error == ERROR_ACCESS_DENIED) {
+        return PortStatus::IN_USE;  // Usually means another process has it open
+    } else if (error == ERROR_FILE_NOT_FOUND) {
+        return PortStatus::UNKNOWN_ERROR;
+    }
+
+    return PortStatus::UNKNOWN_ERROR;
+}
+
 bool Serial::ConfigurePort() {
     DCB dcb = {0};
     dcb.DCBlength = sizeof(DCB);
