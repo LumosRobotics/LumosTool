@@ -39,3 +39,4 @@ enable_testing()
 
 # Build simple lumos CLI tool (for STM32 builds)
 add_subdirectory(src/applications/lumos_simple)
+add_subdirectory(src/applications/simple_serial)
