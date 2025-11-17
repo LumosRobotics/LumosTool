@@ -12,6 +12,7 @@ endif()
 set(SIMPLE_SERIAL_SOURCES
     main.cpp
     ${SERIAL_IMPL}
+    stm32_communicator.cpp
 )
 
 add_executable(simple_serial ${SIMPLE_SERIAL_SOURCES})
