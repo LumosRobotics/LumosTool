@@ -3,10 +3,12 @@
 Create macOS Release Package for Lumos
 
 This script:
-1. Builds for both x86_64 (Intel) and arm64 (Apple Silicon)
-2. Creates a universal binary using lipo
-3. Bundles everything into a distributable package
-4. Creates a .tar.gz archive
+1. Builds yaml-cpp library for both x86_64 and arm64
+2. Creates universal yaml-cpp library using lipo
+3. Builds Lumos for both x86_64 (Intel) and arm64 (Apple Silicon)
+4. Creates universal binaries using lipo
+5. Bundles everything into a distributable package
+6. Creates a .tar.gz archive with checksums
 """
 
 import os
@@ -17,25 +19,25 @@ import platform
 from pathlib import Path
 
 # Configuration
-VERSION = "0.1.0"
+VERSION = "1.0.0"
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 BUILD_DIR = PROJECT_ROOT / "build"
 RELEASE_DIR = PROJECT_ROOT / "release"
 PACKAGE_NAME = f"lumos-macos-{VERSION}"
 PACKAGE_DIR = RELEASE_DIR / PACKAGE_NAME
+YAML_CPP_DIR = PROJECT_ROOT / "third_party" / "yaml-cpp"
 
 # Executables to build
 EXECUTABLES = [
-    "src/applications/lumos_simple/lumos",
-    "src/applications/simple_serial/simple_serial"
+    "src/applications/lumos_simple/lumos"
 ]
 
-# Resources to bundle
-RESOURCES = [
-    "boards",
-    "hal",
-    "platforms"
-]
+# Resources to bundle (relative to PROJECT_ROOT)
+RESOURCES = {
+    "src/boards": "src/boards",
+    "src/toolchains/gcc-arm-none-eabi-10.3-2021.10": "src/toolchains/gcc-arm-none-eabi-10.3-2021.10",
+    "src/toolchains/platform": "src/toolchains/platform"
+}
 
 
 def print_step(message):
@@ -87,7 +89,10 @@ def clean_build_dirs():
     dirs_to_clean = [
         BUILD_DIR / "x86_64",
         BUILD_DIR / "arm64",
-        PACKAGE_DIR
+        PACKAGE_DIR,
+        YAML_CPP_DIR / "build_x86_64",
+        YAML_CPP_DIR / "build_arm64",
+        YAML_CPP_DIR / "build"
     ]
 
     for dir_path in dirs_to_clean:
@@ -100,6 +105,71 @@ def clean_build_dirs():
     print("✓ Build directories cleaned")
 
 
+def build_yaml_cpp_for_architecture(arch):
+    """Build yaml-cpp library for a specific architecture"""
+    print(f"Building yaml-cpp for {arch}...")
+
+    build_dir = YAML_CPP_DIR / f"build_{arch}"
+    build_dir.mkdir(parents=True, exist_ok=True)
+
+    # Configure yaml-cpp
+    cmake_flags = [
+        "-DCMAKE_BUILD_TYPE=Release",
+        f"-DCMAKE_OSX_ARCHITECTURES={arch}",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
+        "-DYAML_CPP_BUILD_TESTS=OFF",
+        "-DYAML_CPP_BUILD_TOOLS=OFF",
+        "-DYAML_BUILD_SHARED_LIBS=OFF"
+    ]
+
+    run_command(
+        ["cmake", "-S", str(YAML_CPP_DIR), "-B", str(build_dir)] + cmake_flags,
+        cwd=YAML_CPP_DIR
+    )
+
+    # Build yaml-cpp
+    run_command(
+        ["cmake", "--build", str(build_dir), "--config", "Release", "-j"],
+        cwd=YAML_CPP_DIR
+    )
+
+    # Return path to the built library
+    lib_path = build_dir / "libyaml-cpp.a"
+    if not lib_path.exists():
+        print(f"Error: yaml-cpp library not found at {lib_path}")
+        sys.exit(1)
+
+    print(f"✓ yaml-cpp for {arch} complete: {lib_path}")
+    return lib_path
+
+
+def create_universal_yaml_cpp():
+    """Build yaml-cpp for both architectures and create universal library"""
+    print_step("Building Universal yaml-cpp Library")
+
+    # Build for both architectures
+    x86_lib = build_yaml_cpp_for_architecture("x86_64")
+    arm_lib = build_yaml_cpp_for_architecture("arm64")
+
+    # Create output directory
+    universal_build_dir = YAML_CPP_DIR / "build"
+    universal_build_dir.mkdir(parents=True, exist_ok=True)
+    universal_lib = universal_build_dir / "libyaml-cpp.a"
+
+    # Create universal library
+    print(f"\nCreating universal yaml-cpp library...")
+    run_command(
+        ["lipo", "-create", str(x86_lib), str(arm_lib), "-output", str(universal_lib)]
+    )
+
+    # Verify it's universal
+    result = run_command(["lipo", "-info", str(universal_lib)])
+    print(f"  {result.stdout.strip()}")
+
+    print(f"✓ Universal yaml-cpp library created: {universal_lib}")
+    return universal_lib
+
+
 def build_for_architecture(arch):
     """Build for a specific architecture"""
     print_step(f"Building for {arch}")
@@ -110,7 +180,8 @@ def build_for_architecture(arch):
     # Set architecture-specific flags
     cmake_flags = [
         "-DCMAKE_BUILD_TYPE=Release",
-        f"-DCMAKE_OSX_ARCHITECTURES={arch}"
+        f"-DCMAKE_OSX_ARCHITECTURES={arch}",
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15"
     ]
 
     # Configure
@@ -183,18 +254,26 @@ def copy_resources(share_dir):
     """Copy resource directories to package"""
     print_step("Copying Resources")
 
-    for resource in RESOURCES:
-        src = PROJECT_ROOT / resource
-        dst = share_dir / resource
+    for src_path, dst_path in RESOURCES.items():
+        src = PROJECT_ROOT / src_path
+        dst = share_dir / dst_path
 
         if src.exists():
-            print(f"Copying {resource}...")
+            print(f"Copying {src_path}...")
+            # Create parent directories if needed
+            dst.parent.mkdir(parents=True, exist_ok=True)
             if dst.exists():
                 shutil.rmtree(dst)
-            shutil.copytree(src, dst)
-            print(f"  ✓ {resource}")
+
+            # Copy the directory
+            shutil.copytree(src, dst, symlinks=True)
+
+            # Get size of copied directory
+            total_size = sum(f.stat().st_size for f in dst.rglob('*') if f.is_file())
+            size_mb = total_size / (1024 * 1024)
+            print(f"  ✓ {src_path} ({size_mb:.1f} MB)")
         else:
-            print(f"  ! Warning: {resource} not found, skipping")
+            print(f"  ! Warning: {src_path} not found, skipping")
 
     print("✓ Resources copied")
 
@@ -250,6 +329,11 @@ echo ""
 echo "${GREEN}✓ Installation complete!${NC}"
 echo ""
 echo "Lumos has been installed to: $INSTALL_PREFIX/bin/lumos"
+echo ""
+echo "Installed components:"
+echo "  - lumos CLI tool (universal binary)"
+echo "  - ARM GCC toolchain (gcc-arm-none-eabi 10.3)"
+echo "  - STM32 HAL drivers and board definitions"
 echo ""
 echo "Make sure $INSTALL_PREFIX/bin is in your PATH."
 echo "You may need to run: export PATH=\"$INSTALL_PREFIX/bin:\\$PATH\""
@@ -337,8 +421,8 @@ SYSTEM REQUIREMENTS
 
 - macOS 10.15 (Catalina) or later
 - Universal binary (Intel and Apple Silicon)
-- ARM GCC toolchain (for building STM32 firmware)
-  Install with: brew install gcc-arm-embedded
+- ARM GCC toolchain is bundled (gcc-arm-none-eabi 10.3)
+- STM32 HAL drivers and CMSIS libraries included
 
 
 SUPPORT
@@ -421,38 +505,45 @@ def main():
         # Step 2: Clean old builds
         clean_build_dirs()
 
-        # Step 3: Build for x86_64
+        # Step 3: Build universal yaml-cpp library
+        create_universal_yaml_cpp()
+
+        # Step 4: Build for x86_64
         x86_build_dir = build_for_architecture("x86_64")
 
-        # Step 4: Build for arm64
+        # Step 5: Build for arm64
         arm_build_dir = build_for_architecture("arm64")
 
-        # Step 5: Create package structure
+        # Step 6: Create package structure
         bin_dir, share_dir = create_package_structure()
 
-        # Step 6: Create universal binaries
+        # Step 7: Create universal binaries
         print_step("Creating Universal Binaries")
         for exe_path in EXECUTABLES:
             create_universal_binary(x86_build_dir, arm_build_dir, bin_dir, exe_path)
 
-        # Step 7: Copy resources
+        # Step 8: Copy resources
         copy_resources(share_dir)
 
-        # Step 8: Create install script
+        # Step 9: Create install script
         create_install_script()
 
-        # Step 9: Create README
+        # Step 10: Create README
         create_readme()
 
-        # Step 10: Create archive
+        # Step 11: Create archive
         archive_path = create_archive()
 
-        # Step 11: Calculate checksums
+        # Step 12: Calculate checksums
         checksum = calculate_checksums(archive_path)
 
         # Success message
         print_step("Build Complete! 🎉")
-        print(f"Package created: {archive_path}")
+
+        print("✓ Created universal binaries (x86_64 + arm64)")
+        print("  Works natively on both Intel and Apple Silicon Macs")
+
+        print(f"\nPackage created: {archive_path}")
         print(f"Package directory: {PACKAGE_DIR}")
         print(f"\nTo test the installation:")
         print(f"  cd {PACKAGE_DIR}")

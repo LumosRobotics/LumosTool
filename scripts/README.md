@@ -41,7 +41,7 @@ The script creates:
 
 ```
 release/
-└── lumos-macos-0.1.0/
+└── lumos-macos-1.0.0/
     ├── bin/
     │   ├── lumos (universal binary)
     │   └── simple_serial (universal binary)
@@ -53,21 +53,21 @@ release/
     ├── install.sh
     └── README.txt
 
-release/lumos-macos-0.1.0.tar.gz
-release/lumos-macos-0.1.0.tar.gz.sha256
+release/lumos-macos-1.0.0.tar.gz
+release/lumos-macos-1.0.0.tar.gz.sha256
 ```
 
 ### Testing the Release
 
 ```bash
-cd release/lumos-macos-0.1.0
+cd release/lumos-macos-1.0.0
 ./install.sh
 lumos --version
 ```
 
 ### Distribution
 
-1. Upload `lumos-macos-0.1.0.tar.gz` to GitHub Releases
+1. Upload `lumos-macos-1.0.0.tar.gz` to GitHub Releases
 2. Include the SHA256 checksum in the release notes
 3. Users download, extract, and run `./install.sh`
 

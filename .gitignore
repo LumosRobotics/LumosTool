@@ -2,5 +2,6 @@ build
 build_release
 .vscode
 Release
+release
 .DS_Store
 src/toolchains

@@ -8,6 +8,11 @@ project(LumosWorkspace C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set minimum macOS version
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version")
+endif()
+
 # Debug options
 option(ENABLE_DEBUG_PORT "Enable debug TCP port for GUI testing" ON)
 
