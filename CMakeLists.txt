@@ -16,11 +16,23 @@ endif()
 # Debug options
 option(ENABLE_DEBUG_PORT "Enable debug TCP port for GUI testing" ON)
 
+# Release build option (set to ON when building official releases)
+option(LUMOS_OFFICIAL_RELEASE "Build as official release" OFF)
+
 # Optionally enable debugging support
 set(CMAKE_BUILD_TYPE Debug)
 
 # Optionally define a version
 set(PROJECT_VERSION "1.0.0")
+
+# Add compile definition for release builds
+if(LUMOS_OFFICIAL_RELEASE)
+    add_compile_definitions(LUMOS_OFFICIAL_RELEASE=1)
+    message(STATUS "Building OFFICIAL RELEASE")
+else()
+    add_compile_definitions(LUMOS_OFFICIAL_RELEASE=0)
+    message(STATUS "Building DEVELOPMENT version")
+endif()
 
 # Googletest
 link_directories(${CMAKE_SOURCE_DIR}/third_party/googletest/lib)

@@ -16,6 +16,7 @@ public:
 private:
     std::string lumos_root_;
 
+    std::string GetResourceBasePath() const;  // Helper for dev vs release structure
     std::string GetToolchainPath() const;
     std::string GetPlatformPath(const std::string& platform) const;
     std::string GetBoardPath(const std::string& board_name) const;

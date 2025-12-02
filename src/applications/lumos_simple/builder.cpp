@@ -15,12 +15,25 @@ Builder::Builder(const std::string& lumos_root)
 {
 }
 
+// Helper to get the correct base path for resources
+// Development: lumos_root/src/
+// Release: lumos_root/
+std::string Builder::GetResourceBasePath() const {
+    // Check if we have development structure (with src/)
+    fs::path dev_path = fs::path(lumos_root_) / "src" / "toolchains";
+    if (fs::exists(dev_path)) {
+        return lumos_root_ + "/src";
+    }
+    // Otherwise assume release structure (no src/)
+    return lumos_root_;
+}
+
 std::string Builder::GetToolchainPath() const {
-    return lumos_root_ + "/src/toolchains/gcc-arm-none-eabi-10.3-2021.10/bin";
+    return GetResourceBasePath() + "/toolchains/gcc-arm-none-eabi-10.3-2021.10/bin";
 }
 
 std::string Builder::GetPlatformPath(const std::string& platform) const {
-    return lumos_root_ + "/src/toolchains/platform/" + platform;
+    return GetResourceBasePath() + "/toolchains/platform/" + platform;
 }
 
 std::string Builder::GetBoardPath(const std::string& board_name) const {
@@ -34,7 +47,7 @@ std::string Builder::GetBoardPath(const std::string& board_name) const {
         }
         board_dir += std::tolower(c);
     }
-    return lumos_root_ + "/src/boards/" + board_dir;
+    return GetResourceBasePath() + "/boards/" + board_dir;
 }
 
 std::vector<std::string> Builder::GetIncludePaths(const BoardConfig& board, const std::string& project_dir) const {
@@ -53,9 +66,6 @@ std::vector<std::string> Builder::GetIncludePaths(const BoardConfig& board, cons
     if (fs::exists(board_path)) {
         includes.push_back(board_path);
     }
-
-    // Add platform paths
-    includes.push_back(platform_path + "/lumos_config");
     includes.push_back(platform_path + "/Drivers/CMSIS/Include");
 
     // Add platform-specific CMSIS device include
@@ -110,9 +120,8 @@ std::vector<std::string> Builder::GetCompilerFlags(const BoardConfig& board) con
 
 std::string Builder::GetLinkerScript(const BoardConfig& board) const {
     std::string board_path = GetBoardPath(board.name);
-    std::string platform_path = GetPlatformPath(board.platform);
 
-    // First, check if board has a custom linker script
+    // Check for board-specific linker script
     std::vector<std::string> board_linker_candidates;
 
     if (board.platform == "h7") {
@@ -129,22 +138,15 @@ std::string Builder::GetLinkerScript(const BoardConfig& board) const {
         }
     }
 
-    // Fall back to platform defaults
-    if (board.platform == "f4") {
-        return platform_path + "/lumos_config/STM32F407VG_FLASH.ld";
-    } else if (board.platform == "h7") {
-        return platform_path + "/lumos_config/STM32H723VG_FLASH.ld";
-    }
-
-    // Default fallback
-    return platform_path + "/lumos_config/STM32F407VG_FLASH.ld";
+    // No fallback - linker script must exist in board directory
+    std::cerr << "Error: No linker script found in board directory: " << board_path << std::endl;
+    return "";
 }
 
 std::string Builder::GetStartupFile(const BoardConfig& board) const {
     std::string board_path = GetBoardPath(board.name);
-    std::string platform_path = GetPlatformPath(board.platform);
 
-    // First, check if board has a custom startup file
+    // Check for board-specific startup file
     std::vector<std::string> board_startup_candidates;
 
     if (board.platform == "h7") {
@@ -161,28 +163,37 @@ std::string Builder::GetStartupFile(const BoardConfig& board) const {
         }
     }
 
-    // Fall back to platform defaults
-    if (board.platform == "f4") {
-        return platform_path + "/lumos_config/startup_stm32f407xx.s";
-    } else if (board.platform == "h7") {
-        return platform_path + "/lumos_config/startup_stm32h723xx.s";
-    }
-
-    // Default fallback
-    return platform_path + "/lumos_config/startup_stm32f407xx.s";
+    // No fallback - startup file must exist in board directory
+    std::cerr << "Error: No startup file found in board directory: " << board_path << std::endl;
+    return "";
 }
 
 std::string Builder::GetSystemFile(const BoardConfig& board) const {
-    std::string platform_path = GetPlatformPath(board.platform);
+    std::string board_path = GetBoardPath(board.name);
 
-    if (board.platform == "f4") {
-        return platform_path + "/lumos_config/system_stm32f4xx.c";
-    } else if (board.platform == "h7") {
-        return platform_path + "/lumos_config/system_stm32h7xx.c";
+    // Check for board-specific system file
+    std::vector<std::string> board_system_candidates;
+
+    if (board.platform == "h7") {
+        board_system_candidates.push_back(board_path + "/system_stm32h7xx.c");
+    } else if (board.platform == "f4") {
+        board_system_candidates.push_back(board_path + "/system_stm32f4xx.c");
+    } else if (board.platform == "g0") {
+        board_system_candidates.push_back(board_path + "/system_stm32g0xx.c");
+    } else if (board.platform == "g4") {
+        board_system_candidates.push_back(board_path + "/system_stm32g4xx.c");
     }
 
-    // Default fallback
-    return platform_path + "/lumos_config/system_stm32f4xx.c";
+    // Check board-specific system files
+    for (const auto& candidate : board_system_candidates) {
+        if (fs::exists(candidate)) {
+            return candidate;
+        }
+    }
+
+    // No fallback - system file must exist in board directory
+    std::cerr << "Error: No system file found in board directory: " << board_path << std::endl;
+    return "";
 }
 
 std::vector<std::string> Builder::GetBoardSupportFiles(const BoardConfig& board) const {

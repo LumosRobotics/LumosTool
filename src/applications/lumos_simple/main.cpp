@@ -64,54 +64,86 @@ void PrintVersion() {
     std::cout << "Lumos v1.0.0" << std::endl;
 }
 
-std::string GetLumosRoot() {
-    // Priority 1: Check environment variable
-    const char* lumos_root_env = std::getenv("LUMOS_ROOT");
-    if (lumos_root_env) {
-        return std::string(lumos_root_env);
-    }
-
-    // Priority 2: Calculate relative to executable path
-    // Expected structure after installation:
-    // /usr/local/bin/lumos (or similar)
-    // /usr/local/share/lumos/ (boards, hal, platforms)
-
+std::string GetExecutablePath() {
 #ifdef __APPLE__
     char exe_path[PATH_MAX];
     uint32_t size = sizeof(exe_path);
     if (_NSGetExecutablePath(exe_path, &size) == 0) {
-        // exe_path is something like: /usr/local/bin/lumos
-        fs::path exec_dir = fs::path(exe_path).parent_path();  // /usr/local/bin
-        fs::path share_dir = exec_dir.parent_path() / "share" / "lumos";  // /usr/local/share/lumos
-
-        if (fs::exists(share_dir)) {
-            return share_dir.string();
-        }
+        return std::string(exe_path);
     }
 #elif __linux__
     char exe_path[PATH_MAX];
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
     if (len != -1) {
         exe_path[len] = '\0';
-        fs::path exec_dir = fs::path(exe_path).parent_path();
-        fs::path share_dir = exec_dir.parent_path() / "share" / "lumos";
-
-        if (fs::exists(share_dir)) {
-            return share_dir.string();
-        }
+        return std::string(exe_path);
     }
 #elif _WIN32
     char exe_path[MAX_PATH];
-    GetModuleFileNameA(NULL, exe_path, MAX_PATH);
-    fs::path exec_dir = fs::path(exe_path).parent_path();
-    fs::path share_dir = exec_dir.parent_path() / "share" / "lumos";
+    if (GetModuleFileNameA(NULL, exe_path, MAX_PATH) != 0) {
+        return std::string(exe_path);
+    }
+#endif
+    return "";
+}
 
-    if (fs::exists(share_dir)) {
-        return share_dir.string();
+bool IsValidLumosRoot(const fs::path& path) {
+    // Check for presence of required directories/files
+    // Development structure: src/toolchains, src/boards
+    // Release structure: toolchains, boards (no src/)
+    bool dev_structure = fs::exists(path / "src" / "toolchains") &&
+                         fs::exists(path / "src" / "boards");
+    bool release_structure = fs::exists(path / "toolchains") &&
+                             fs::exists(path / "boards");
+
+    return dev_structure || release_structure;
+}
+
+std::string GetLumosRoot() {
+#if LUMOS_OFFICIAL_RELEASE
+    // Official release: prioritize installed paths, ignore env variable unless explicitly needed
+    // Priority 1: Auto-detect from executable path
+#else
+    // Development build: allow environment variable override for easier testing
+    // Priority 1: Check environment variable (for override during development/testing)
+    const char* lumos_root_env = std::getenv("LUMOS_ROOT");
+    if (lumos_root_env && IsValidLumosRoot(lumos_root_env)) {
+        return std::string(lumos_root_env);
     }
 #endif
 
-    // Priority 3: Check standard installation locations
+    // Priority 2: Auto-detect from executable path
+    std::string exe_path_str = GetExecutablePath();
+    if (!exe_path_str.empty()) {
+        fs::path exe_path = fs::path(exe_path_str);
+        fs::path current_dir = exe_path.parent_path();
+
+        // Try multiple strategies to find LUMOS_ROOT
+        std::vector<fs::path> candidates;
+
+        // Strategy 1: Installed structure (bin/lumos -> ../share/lumos)
+        // Example: /usr/local/bin/lumos -> /usr/local/share/lumos
+        candidates.push_back(current_dir.parent_path() / "share" / "lumos");
+
+        // Strategy 2: Development structure (build/src/applications/lumos_simple/lumos -> ../../../../)
+        // Walk up the tree looking for the marker
+        fs::path temp = current_dir;
+        for (int i = 0; i < 6; i++) {  // Look up to 6 levels
+            candidates.push_back(temp);
+            if (temp.parent_path() == temp) break;  // Reached filesystem root
+            temp = temp.parent_path();
+        }
+
+        // Check each candidate
+        for (const auto& candidate : candidates) {
+            if (IsValidLumosRoot(candidate)) {
+                return candidate.string();
+            }
+        }
+    }
+
+    // Priority 3: Check standard installation locations (Unix-like systems)
+#ifndef _WIN32
     std::vector<std::string> standard_paths = {
         "/usr/local/share/lumos",
         "/usr/share/lumos",
@@ -119,17 +151,23 @@ std::string GetLumosRoot() {
     };
 
     for (const auto& path : standard_paths) {
-        if (fs::exists(path)) {
+        if (IsValidLumosRoot(path)) {
             return path;
         }
     }
+#else
+    // Windows standard paths
+    std::vector<std::string> standard_paths = {
+        "C:\\Program Files\\Lumos\\share\\lumos",
+        "C:\\Program Files (x86)\\Lumos\\share\\lumos"
+    };
 
-    // Priority 4: Development fallback (when running from build directory)
-    // Assume we're in build/src/applications/lumos_simple/
-    std::string dev_path = "/Users/danielpi/work/LumosTool";
-    if (fs::exists(dev_path)) {
-        return dev_path;
+    for (const auto& path : standard_paths) {
+        if (IsValidLumosRoot(path)) {
+            return path;
+        }
     }
+#endif
 
     // If all else fails, return empty (will cause error)
     return "";
@@ -470,7 +508,13 @@ int main(int argc, char** argv) {
 
         // Get Lumos root
         std::string lumos_root = GetLumosRoot();
-        std::cout << "Lumos Root: " << lumos_root << std::endl;
+        // Normalize path for cleaner output
+        try {
+            fs::path normalized = fs::canonical(lumos_root);
+            std::cout << "Lumos Root: " << normalized.string() << std::endl;
+        } catch (...) {
+            std::cout << "Lumos Root: " << lumos_root << std::endl;
+        }
         std::cout << std::endl;
 
         // Create builder and build

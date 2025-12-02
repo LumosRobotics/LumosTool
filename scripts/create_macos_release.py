@@ -33,10 +33,11 @@ EXECUTABLES = [
 ]
 
 # Resources to bundle (relative to PROJECT_ROOT)
+# Format: "source_path": "destination_path_in_share"
 RESOURCES = {
-    "src/boards": "src/boards",
-    "src/toolchains/gcc-arm-none-eabi-10.3-2021.10": "src/toolchains/gcc-arm-none-eabi-10.3-2021.10",
-    "src/toolchains/platform": "src/toolchains/platform"
+    "src/boards": "boards",  # Flatten: no src/ prefix in release
+    "src/toolchains/gcc-arm-none-eabi-10.3-2021.10": "toolchains/gcc-arm-none-eabi-10.3-2021.10",
+    "src/toolchains/platform": "toolchains/platform"
 }
 
 
@@ -181,7 +182,8 @@ def build_for_architecture(arch):
     cmake_flags = [
         "-DCMAKE_BUILD_TYPE=Release",
         f"-DCMAKE_OSX_ARCHITECTURES={arch}",
-        "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15"
+        "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
+        "-DLUMOS_OFFICIAL_RELEASE=ON"  # Mark as official release build
     ]
 
     # Configure
