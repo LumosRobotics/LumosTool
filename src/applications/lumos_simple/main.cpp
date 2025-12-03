@@ -100,19 +100,8 @@ bool IsValidLumosRoot(const fs::path& path) {
 }
 
 std::string GetLumosRoot() {
-#if LUMOS_OFFICIAL_RELEASE
-    // Official release: prioritize installed paths, ignore env variable unless explicitly needed
-    // Priority 1: Auto-detect from executable path
-#else
-    // Development build: allow environment variable override for easier testing
-    // Priority 1: Check environment variable (for override during development/testing)
-    const char* lumos_root_env = std::getenv("LUMOS_ROOT");
-    if (lumos_root_env && IsValidLumosRoot(lumos_root_env)) {
-        return std::string(lumos_root_env);
-    }
-#endif
-
-    // Priority 2: Auto-detect from executable path
+    // Auto-detect LUMOS_ROOT from executable path
+    // Works for both development and release builds without requiring environment variables
     std::string exe_path_str = GetExecutablePath();
     if (!exe_path_str.empty()) {
         fs::path exe_path = fs::path(exe_path_str);
@@ -142,7 +131,7 @@ std::string GetLumosRoot() {
         }
     }
 
-    // Priority 3: Check standard installation locations (Unix-like systems)
+    // Fallback: Check standard installation locations (Unix-like systems)
 #ifndef _WIN32
     std::vector<std::string> standard_paths = {
         "/usr/local/share/lumos",

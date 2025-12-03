@@ -1,0 +1,5 @@
+# Python dependencies for Lumos system tests
+
+pytest>=7.0.0
+pytest-timeout>=2.1.0
+pyyaml>=6.0

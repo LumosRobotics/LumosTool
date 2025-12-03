@@ -243,7 +243,7 @@ def create_package_structure():
 
     # Create directory structure
     bin_dir = PACKAGE_DIR / "bin"
-    share_dir = PACKAGE_DIR / "share" / "lumos"
+    share_dir = PACKAGE_DIR / "share"
 
     bin_dir.mkdir(parents=True, exist_ok=True)
     share_dir.mkdir(parents=True, exist_ok=True)
@@ -325,7 +325,7 @@ chmod +x "$INSTALL_PREFIX/bin/simple_serial"
 
 # Install resources
 echo "Installing resources..."
-cp -rv share/lumos/* "$INSTALL_PREFIX/share/lumos/"
+cp -rv share/* "$INSTALL_PREFIX/share/lumos/"
 
 echo ""
 echo "${GREEN}✓ Installation complete!${NC}"

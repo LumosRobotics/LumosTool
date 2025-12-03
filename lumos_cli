@@ -1,0 +1,105 @@
+#!/bin/bash
+#
+# Lumos CLI Wrapper - Development Entrypoint
+#
+# This script provides a convenient wrapper around the lumos binary
+# for development purposes, with bash completion support.
+#
+# Usage:
+#   ./lumos_cli <command> [options]
+#
+# To enable tab completion in your current shell:
+#   source lumos_cli
+#
+
+# Get the directory where this script resides
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Path to the lumos binary (development build)
+LUMOS_BINARY="$SCRIPT_DIR/build/src/applications/lumos_simple/lumos_dev"
+
+# Check if being sourced (for completion setup)
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    # Being sourced - set up completion
+    _lumos_completion() {
+        local cur prev commands
+        COMPREPLY=()
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+        # Available commands
+        commands="init build flash monitor reset ports --help --version -h -v"
+
+        # If we're completing the first argument (command)
+        if [ $COMP_CWORD -eq 1 ]; then
+            COMPREPLY=( $(compgen -W "${commands}" -- ${cur}) )
+            return 0
+        fi
+
+        # If previous word was 'flash' or 'monitor', suggest ports
+        if [[ "$prev" == "flash" ]] || [[ "$prev" == "monitor" ]]; then
+            # Try to get available ports dynamically
+            if [ -x "$LUMOS_BINARY" ]; then
+                local ports=$("$LUMOS_BINARY" ports 2>/dev/null | grep -E "^\s+/" | awk '{print $1}')
+                COMPREPLY=( $(compgen -W "${ports}" -- ${cur}) )
+            fi
+            return 0
+        fi
+
+        # If previous word was 'reset', require a port (suggest available ones)
+        if [[ "$prev" == "reset" ]]; then
+            if [ -x "$LUMOS_BINARY" ]; then
+                local ports=$("$LUMOS_BINARY" ports 2>/dev/null | grep -E "^\s+/" | awk '{print $1}')
+                COMPREPLY=( $(compgen -W "${ports}" -- ${cur}) )
+            fi
+            return 0
+        fi
+
+        return 0
+    }
+
+    # Register the completion function
+    complete -F _lumos_completion lumos_cli
+    complete -F _lumos_completion ./lumos_cli
+
+    echo "✓ Lumos CLI completion loaded!"
+    echo "You can now use tab completion with: ./lumos_cli <TAB>"
+    return 0
+fi
+
+# Not sourced - execute as wrapper script
+
+# Check if lumos binary exists
+if [ ! -f "$LUMOS_BINARY" ]; then
+    echo "Error: Lumos binary not found at: $LUMOS_BINARY"
+    echo ""
+    echo "Please build the project first:"
+    echo "  mkdir -p build && cd build"
+    echo "  cmake .."
+    echo "  cmake --build ."
+    echo ""
+    exit 1
+fi
+
+# Check if binary is executable
+if [ ! -x "$LUMOS_BINARY" ]; then
+    echo "Error: Lumos binary is not executable: $LUMOS_BINARY"
+    echo "Try: chmod +x $LUMOS_BINARY"
+    exit 1
+fi
+
+# If no arguments provided, show usage
+if [ $# -eq 0 ]; then
+    "$LUMOS_BINARY" --help
+    echo ""
+    echo "Development wrapper: $0"
+    echo "Binary location: $LUMOS_BINARY"
+    echo ""
+    echo "To enable tab completion:"
+    echo "  source $0"
+    echo ""
+    exit 0
+fi
+
+# Execute lumos with all provided arguments
+exec "$LUMOS_BINARY" "$@"

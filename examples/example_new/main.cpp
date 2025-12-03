@@ -3,6 +3,8 @@
  * This is where the setup() and loop() functions are defined
  */
 
+#include "source_file.h"
+
 /**
  * Setup function - called once at startup
  */
@@ -12,6 +14,7 @@ void setup()
     // - Configure GPIO pins
     // - Initialize UART, SPI, I2C, etc.
     // - Set up timers
+    someFunction();
 }
 
 /**
