@@ -4,7 +4,7 @@
  */
 
 #include "source_file.h"
-
+#include <jst_shield.h>
 /**
  * Setup function - called once at startup
  */
