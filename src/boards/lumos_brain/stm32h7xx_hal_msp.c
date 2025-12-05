@@ -22,7 +22,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 /* USER CODE BEGIN Includes */
-
+#include "stm32h7xx_hal_uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -251,5 +251,31 @@ void HAL_PCD_MspDeInit(PCD_HandleTypeDef* hpcd)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+* @brief UART MSP Initialization
+* This function is intentionally minimal because GPIO and clock configuration
+* is handled in the Serial class begin() method.
+* @param huart: UART handle pointer
+* @retval None
+*/
+void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+{
+  /* GPIO and clock configuration is handled in Serial::begin() */
+  /* This callback is kept minimal to satisfy HAL requirements */
+}
+
+/**
+* @brief UART MSP De-Initialization
+* This function is intentionally minimal because GPIO deinitialization
+* is handled in the Serial class end() method.
+* @param huart: UART handle pointer
+* @retval None
+*/
+void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
+{
+  /* GPIO deinitialization is handled in Serial::end() */
+  /* This callback is kept minimal to satisfy HAL requirements */
+}
 
 /* USER CODE END 1 */

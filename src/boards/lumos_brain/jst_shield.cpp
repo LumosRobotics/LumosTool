@@ -1,7 +1,10 @@
 #include "jst_shield.h"
 
-Serial Serial7{UART7};
-Serial Serial8{UART8};
+// UART7: PE8 (TX), PE7 (RX)
+Serial Serial7{UART7, GPIOE, GPIO_PIN_8, GPIOE, GPIO_PIN_7, GPIO_AF7_UART7};
+
+// UART8: PE1 (TX), PE0 (RX)
+Serial Serial8{UART8, GPIOE, GPIO_PIN_1, GPIOE, GPIO_PIN_0, GPIO_AF8_UART8};
 
 // Create global CAN instances
 CAN CAN1{FDCAN1};
