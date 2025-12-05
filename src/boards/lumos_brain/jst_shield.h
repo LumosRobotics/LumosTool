@@ -1,31 +1,32 @@
 #pragma once
 
 #include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_uart.h"
+#include <uart.h>
+#include <i2c.h>
+#include <can.h>
 
-class Serial
-{
-private:
-    UART_HandleTypeDef uart_handle_;
+extern Serial Serial7;
+extern Serial Serial8;
 
-public:
-    Serial() = delete;
-    // Serial(const int num);
-    Serial(USART_TypeDef* usart_def);
-    
-    void begin(const uint32_t baudrate);
-    void end();
+extern CAN CAN1;
+extern CAN CAN2;
+extern CAN CAN3;
 
-    Serial& setParity(const uint32_t Parity)
-    {
-        uart_handle_.Init.Parity = Parity;
-        HAL_UART_Init(&uart_handle_);
-        return *this;
-    }
-};
+// Using lowercase names to avoid conflict with HAL I2C1/I2C2/I2C4 macros
+extern I2C i2c1;
+extern I2C i2c2;
+extern I2C i2c4;
 
-extern Serial Serial1;
-extern Serial Serial2;
+/*
+SpiPort Spi1
+Spi1.begin(200000r);
+Spi1.
+
+Always same "extra" pin for SS
+For "extended" port, always Pin furthest out that is GP
+
+
+*/
 
 /*#define FDCAN1_TX PD1
 #define FDCAN1_RX PD0

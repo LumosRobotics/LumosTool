@@ -5,6 +5,7 @@
 
 #include "source_file.h"
 #include <jst_shield.h>
+#include <lumos_brain.h>
 /**
  * Setup function - called once at startup
  */
@@ -15,6 +16,8 @@ void setup()
     // - Initialize UART, SPI, I2C, etc.
     // - Set up timers
     someFunction();
+
+    Serial7.begin(115200);
 }
 
 /**

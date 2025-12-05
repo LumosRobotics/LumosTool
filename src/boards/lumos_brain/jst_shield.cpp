@@ -1,35 +1,14 @@
 #include "jst_shield.h"
 
-Serial::Serial(USART_TypeDef* usart_def) : uart_handle_{}
-{
-    // Initialize default values
-    uart_handle_.Instance = usart_def;
-    uart_handle_.Init.BaudRate = 115200;
-    uart_handle_.Init.WordLength = UART_WORDLENGTH_8B;
-    uart_handle_.Init.StopBits = UART_STOPBITS_1;
-    uart_handle_.Init.Parity = UART_PARITY_NONE;
-    uart_handle_.Init.Mode = UART_MODE_TX_RX;
-    uart_handle_.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    uart_handle_.Init.OverSampling = UART_OVERSAMPLING_16;
-    uart_handle_.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-    uart_handle_.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+Serial Serial7{UART7};
+Serial Serial8{UART8};
 
-    uart_handle_.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+// Create global CAN instances
+CAN CAN1{FDCAN1};
+CAN CAN2{FDCAN2};
+CAN CAN3{FDCAN3};
 
-}
-
-void Serial::begin(const uint32_t baudrate)
-{
-    uart_handle_.Init.BaudRate = baudrate;
-    // if (HAL_UART_Init(&uart_handle_) != HAL_OK)
-    {
-        // Error_Handler();
-    }
-}
-
-void Serial::end()
-{
-}
-
-Serial Serial1{UART7};
-Serial Serial2{UART8};
+// Create global I2C instances (lowercase names to avoid HAL macro conflicts)
+I2C i2c1{I2C1};
+I2C i2c2{I2C2};
+I2C i2c4{I2C4};

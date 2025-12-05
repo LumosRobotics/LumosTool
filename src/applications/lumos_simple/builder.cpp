@@ -66,6 +66,13 @@ std::vector<std::string> Builder::GetIncludePaths(const BoardConfig& board, cons
     if (fs::exists(board_path)) {
         includes.push_back(board_path);
     }
+
+    // Add wrapper directory for generic peripheral abstractions
+    std::string wrapper_path = GetResourceBasePath() + "/wrapper";
+    if (fs::exists(wrapper_path)) {
+        includes.push_back(wrapper_path);
+    }
+
     includes.push_back(platform_path + "/Drivers/CMSIS/Include");
 
     // Add platform-specific CMSIS device include
@@ -222,6 +229,23 @@ std::vector<std::string> Builder::GetBoardSupportFiles(const BoardConfig& board)
 
     if (ec) {
         std::cerr << "Error scanning board directory: " << ec.message() << std::endl;
+    }
+
+    // Also scan wrapper directory for generic peripheral implementations
+    std::string wrapper_path = GetResourceBasePath() + "/wrapper";
+    if (fs::exists(wrapper_path)) {
+        std::error_code wrapper_ec;
+        for (const auto& entry : fs::directory_iterator(wrapper_path, wrapper_ec)) {
+            if (entry.is_regular_file()) {
+                std::string extension = entry.path().extension().string();
+                if (extension == ".c" || extension == ".cpp") {
+                    board_files.push_back(entry.path().string());
+                }
+            }
+        }
+        if (wrapper_ec) {
+            std::cerr << "Error scanning wrapper directory: " << wrapper_ec.message() << std::endl;
+        }
     }
 
     return board_files;
