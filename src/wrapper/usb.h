@@ -1,7 +1,25 @@
 #pragma once
 
-#include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_pcd.h"
+// Platform-specific HAL headers
+#if defined(STM32H7)
+    #include "stm32h7xx_hal.h"
+    #include "stm32h7xx_hal_pcd.h"
+#elif defined(STM32G0)
+    #include "stm32g0xx_hal.h"
+    #include "stm32g0xx_hal_pcd.h"
+#elif defined(STM32G4)
+    #include "stm32g4xx_hal.h"
+    #include "stm32g4xx_hal_pcd.h"
+#elif defined(STM32F4)
+    #include "stm32f4xx_hal.h"
+    #include "stm32f4xx_hal_pcd.h"
+#elif defined(STM32H5)
+    #include "stm32h5xx_hal.h"
+    #include "stm32h5xx_hal_pcd.h"
+#else
+    #error "Unsupported STM32 platform. Define STM32H7, STM32G0, STM32G4, STM32F4, or STM32H5."
+#endif
+
 #include <cstring>
 #include <cstdio>
 
@@ -36,9 +54,18 @@ private:
     volatile bool initialized_;
     volatile bool connected_;
 
+    GPIO_TypeDef* dp_port_;
+    uint16_t dp_pin_;
+    GPIO_TypeDef* dm_port_;
+    uint16_t dm_pin_;
+    uint32_t alternate_function_;
+
 public:
     USB() = delete;
-    USB(PCD_TypeDef* usb_instance);
+    USB(PCD_TypeDef* usb_instance,
+        GPIO_TypeDef* dp_port, uint16_t dp_pin,
+        GPIO_TypeDef* dm_port, uint16_t dm_pin,
+        uint32_t alternate_function);
 
     // Initialization
     bool begin();

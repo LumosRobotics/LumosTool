@@ -1,0 +1,47 @@
+MCU: STM32G0B1CBU3
+MAX_CPU: 64 MHz
+Memory:
+  Flash: 128
+  RAM: 144
+FDCAN1:
+  PB12_[PA10]: "RX"
+  PB11_[PA9]: "TX"
+UART1[Pgm]:
+  PA9: "TX"
+  PA10: "RX"
+I2C1[JST]:
+  PB9: "SDA"
+  PB8: "SCL"
+UART3[JST]:
+  PB9: "RX"
+  PB8: "TX"
+UART6[JST]:
+  PB9: "RX"
+  PB8: "TX"
+I2C3[BottomConnector]:
+  PA6: "SDA"
+  PA7: "SCL"
+UART5[BottomConnector]:
+  PB2: "TX"
+  PB1: "RX"
+SPI3[BottomConnector]:
+  PB5: "MOSI"
+  PB4: "MISO"
+  PB3: "SCK"
+BottomConnector:
+  1: "GND"
+  2: "PA15"
+  3: "PB1_UART5_RX"
+  4: "PD2"
+  5: "PB0_UART5_TX"
+  6: "5V"
+  7: "GND"
+  8: "PB3_SPI3_SCK"
+  9: "PA7_I2C3_SCL"
+  10: "PB4_SPI3_MISO"
+  11: "PA6_I2C3_SDA"
+  12: "PB5_SPI3_MOSI"
+  13: "PA2"
+  14: "3.3V"
+  15: "PA1"
+  16: "PB7"

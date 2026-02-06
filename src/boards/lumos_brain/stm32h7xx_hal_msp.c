@@ -80,12 +80,12 @@ void HAL_MspInit(void)
 /**
 * @brief SD MSP Initialization
 * This function configures the hardware resources used in this example
+* GPIO configuration is handled in SDCard::begin() method
 * @param hsd: SD handle pointer
 * @retval None
 */
 void HAL_SD_MspInit(SD_HandleTypeDef* hsd)
 {
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
   if(hsd->Instance==SDMMC1)
   {
@@ -110,33 +110,7 @@ void HAL_SD_MspInit(SD_HandleTypeDef* hsd)
       Error_Handler();
     }
 
-    /* Peripheral clock enable */
-    __HAL_RCC_SDMMC1_CLK_ENABLE();
-
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOD_CLK_ENABLE();
-    /**SDMMC1 GPIO Configuration
-    PC8     ------> SDMMC1_D0
-    PC9     ------> SDMMC1_D1
-    PC10     ------> SDMMC1_D2
-    PC11     ------> SDMMC1_D3
-    PC12     ------> SDMMC1_CK
-    PD2     ------> SDMMC1_CMD
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
-                          |GPIO_PIN_12;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF12_SDMMC1;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = GPIO_PIN_2;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF12_SDMMC1;
-    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+    /* GPIO configuration is handled in SDCard::begin() */
 
   /* USER CODE BEGIN SDMMC1_MspInit 1 */
 
@@ -149,6 +123,7 @@ void HAL_SD_MspInit(SD_HandleTypeDef* hsd)
 /**
 * @brief SD MSP De-Initialization
 * This function freeze the hardware resources used in this example
+* GPIO deinitialization is handled in SDCard::end() method
 * @param hsd: SD handle pointer
 * @retval None
 */
@@ -159,21 +134,7 @@ void HAL_SD_MspDeInit(SD_HandleTypeDef* hsd)
   /* USER CODE BEGIN SDMMC1_MspDeInit 0 */
 
   /* USER CODE END SDMMC1_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_SDMMC1_CLK_DISABLE();
-
-    /**SDMMC1 GPIO Configuration
-    PC8     ------> SDMMC1_D0
-    PC9     ------> SDMMC1_D1
-    PC10     ------> SDMMC1_D2
-    PC11     ------> SDMMC1_D3
-    PC12     ------> SDMMC1_CK
-    PD2     ------> SDMMC1_CMD
-    */
-    HAL_GPIO_DeInit(GPIOC, GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
-                          |GPIO_PIN_12);
-
-    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_2);
+    /* GPIO deinitialization is handled in SDCard::end() */
 
   /* USER CODE BEGIN SDMMC1_MspDeInit 1 */
 
@@ -185,6 +146,7 @@ void HAL_SD_MspDeInit(SD_HandleTypeDef* hsd)
 /**
 * @brief PCD MSP Initialization
 * This function configures the hardware resources used in this example
+* GPIO configuration is handled in USB::begin() method
 * @param hpcd: PCD handle pointer
 * @retval None
 */
@@ -220,6 +182,9 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef* hpcd)
 
     /* Peripheral clock enable */
     __HAL_RCC_USB_OTG_HS_CLK_ENABLE();
+
+    /* GPIO configuration is handled in USB::begin() */
+
   /* USER CODE BEGIN USB_OTG_HS_MspInit 1 */
 
   /* USER CODE END USB_OTG_HS_MspInit 1 */

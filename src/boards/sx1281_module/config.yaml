@@ -1,0 +1,35 @@
+MCU: STM32H523CEU6
+MAX_CPU: 250 MHz
+Memory:
+  Flash: 512
+  RAM: 272
+UART3[Pgm]:
+  PB10: "TX"
+  PB1: "RX"
+SPI3[SX1281]:
+  PA5: "SCK"
+  PA6: "MISO"
+  PA7: "MOSI"
+  PA4: "NSS"
+SX1281 CTRL Pins:
+  PA1: "RX_EN"
+  PA10: "TX_EN"
+  PA9: "NRESET"
+  PA8: "BUSY"
+  PB15: "DIO1"
+  PB14: "DIO2"
+  PB13: "DIO3"
+Edge Connector:
+  1: "GND"
+  2: "5V"
+  3: "3.3V"
+  4: "PB12"
+  5: "PA15"
+  6: "PB3"
+  7: "PB4"
+  8: "PB3 (USART3_RX)"
+  9: "PB10 (USART3_TX)"
+  10: "PB2"
+  11: "PB0"
+  12: "PA3"
+  13: "PA2"

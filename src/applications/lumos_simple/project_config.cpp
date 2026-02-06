@@ -68,6 +68,20 @@ BoardConfig BoardConfig::GetConfig(const std::string& board_name) {
         config.float_abi = "hard";
         config.fpu = "fpv5-d16";
     }
+    else if (board_name == "LumosMicroBrain") {
+        config.platform = "g0";
+        config.mcu = "STM32G0B1xx";
+        config.cpu = "cortex-m0plus";
+        config.float_abi = "soft";
+        config.fpu = "";
+    }
+    else if (board_name == "SX1281Module") {
+        config.platform = "h5";
+        config.mcu = "STM32H523xx";
+        config.cpu = "cortex-m33";
+        config.float_abi = "hard";
+        config.fpu = "fpv5-sp-d16";
+    }
     // Add more boards as needed
     else {
         std::cerr << "Warning: Unknown board '" << board_name << "', defaulting to H7" << std::endl;

@@ -1,7 +1,27 @@
 #pragma once
 
-#include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_fdcan.h"
+// Platform-specific HAL headers
+// Note: FDCAN is only available on certain STM32 families (G0, G4, H5, H7)
+#if defined(STM32H7)
+    #include "stm32h7xx_hal.h"
+    #include "stm32h7xx_hal_fdcan.h"
+#elif defined(STM32G0)
+    #include "stm32g0xx_hal.h"
+    #include "stm32g0xx_hal_fdcan.h"
+#elif defined(STM32G4)
+    #include "stm32g4xx_hal.h"
+    #include "stm32g4xx_hal_fdcan.h"
+#elif defined(STM32H5)
+    #include "stm32h5xx_hal.h"
+    #include "stm32h5xx_hal_fdcan.h"
+#elif defined(STM32F4)
+    // F4 uses classic CAN (bxCAN), not FDCAN
+    #include "stm32f4xx_hal.h"
+    #include "stm32f4xx_hal_can.h"
+    #error "CAN wrapper currently supports FDCAN only. F4 uses bxCAN which has different API."
+#else
+    #error "Unsupported STM32 platform. Define STM32H7, STM32G0, STM32G4, or STM32H5."
+#endif
 
 // CAN (FDCAN) Class - Flexible Data-rate CAN
 // Usage Example:
@@ -21,9 +41,19 @@ class CAN
 private:
     FDCAN_HandleTypeDef fdcan_handle_;
 
+    // GPIO configuration
+    GPIO_TypeDef* tx_port_;
+    uint16_t tx_pin_;
+    GPIO_TypeDef* rx_port_;
+    uint16_t rx_pin_;
+    uint32_t alternate_function_;
+
 public:
     CAN() = delete;
-    CAN(FDCAN_GlobalTypeDef* fdcan_instance);
+    CAN(FDCAN_GlobalTypeDef* fdcan_instance,
+        GPIO_TypeDef* tx_port, uint16_t tx_pin,
+        GPIO_TypeDef* rx_port, uint16_t rx_pin,
+        uint32_t alternate_function);
 
     void begin(const uint32_t bitrate = 500000);
     void end();

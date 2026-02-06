@@ -82,6 +82,9 @@ std::vector<std::string> Builder::GetIncludePaths(const BoardConfig& board, cons
     } else if (board.platform == "h7") {
         includes.push_back(platform_path + "/Drivers/CMSIS/Device/ST/STM32H7xx/Include");
         includes.push_back(platform_path + "/Drivers/STM32H7xx_HAL_Driver/Inc");
+    } else if (board.platform == "h5") {
+        includes.push_back(platform_path + "/Drivers/CMSIS/Device/ST/STM32H5xx/Include");
+        includes.push_back(platform_path + "/Drivers/STM32H5xx_HAL_Driver/Inc");
     } else if (board.platform == "g0") {
         includes.push_back(platform_path + "/Drivers/CMSIS/Device/ST/STM32G0xx/Include");
         includes.push_back(platform_path + "/Drivers/STM32G0xx_HAL_Driver/Inc");
@@ -134,8 +137,23 @@ std::string Builder::GetLinkerScript(const BoardConfig& board) const {
     if (board.platform == "h7") {
         board_linker_candidates.push_back(board_path + "/STM32H723VGTX_FLASH.ld");
         board_linker_candidates.push_back(board_path + "/STM32H723VG_FLASH.ld");
+    } else if (board.platform == "h5") {
+        board_linker_candidates.push_back(board_path + "/STM32H503RB_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32H523xx_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32H533xx_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32H563xx_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32H573xx_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32H5xx_FLASH.ld");
     } else if (board.platform == "f4") {
         board_linker_candidates.push_back(board_path + "/STM32F407VG_FLASH.ld");
+    } else if (board.platform == "g0") {
+        board_linker_candidates.push_back(board_path + "/STM32G0B1CBUX_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32G0B1xx_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32G0xx_FLASH.ld");
+    } else if (board.platform == "g4") {
+        board_linker_candidates.push_back(board_path + "/STM32G431CBU_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32G431xx_FLASH.ld");
+        board_linker_candidates.push_back(board_path + "/STM32G4xx_FLASH.ld");
     }
 
     // Check board-specific linker scripts
@@ -159,8 +177,22 @@ std::string Builder::GetStartupFile(const BoardConfig& board) const {
     if (board.platform == "h7") {
         board_startup_candidates.push_back(board_path + "/startup_stm32h723vgtx.s");
         board_startup_candidates.push_back(board_path + "/startup_stm32h723xx.s");
+    } else if (board.platform == "h5") {
+        board_startup_candidates.push_back(board_path + "/startup_stm32h503rb.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32h523xx.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32h533xx.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32h563xx.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32h573xx.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32h5xx.s");
     } else if (board.platform == "f4") {
         board_startup_candidates.push_back(board_path + "/startup_stm32f407xx.s");
+    } else if (board.platform == "g0") {
+        board_startup_candidates.push_back(board_path + "/startup_stm32g0b1cbux.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32g0b1xx.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32g0xx.s");
+    } else if (board.platform == "g4") {
+        board_startup_candidates.push_back(board_path + "/startup_stm32g431xx.s");
+        board_startup_candidates.push_back(board_path + "/startup_stm32g4xx.s");
     }
 
     // Check board-specific startup files
@@ -183,6 +215,8 @@ std::string Builder::GetSystemFile(const BoardConfig& board) const {
 
     if (board.platform == "h7") {
         board_system_candidates.push_back(board_path + "/system_stm32h7xx.c");
+    } else if (board.platform == "h5") {
+        board_system_candidates.push_back(board_path + "/system_stm32h5xx.c");
     } else if (board.platform == "f4") {
         board_system_candidates.push_back(board_path + "/system_stm32f4xx.c");
     } else if (board.platform == "g0") {
@@ -263,6 +297,9 @@ std::vector<std::string> Builder::GetRequiredHALFiles(const BoardConfig& board, 
     } else if (board.platform == "h7") {
         hal_driver_path = platform_path + "/Drivers/STM32H7xx_HAL_Driver/Src";
         prefix = "stm32h7xx_hal";
+    } else if (board.platform == "h5") {
+        hal_driver_path = platform_path + "/Drivers/STM32H5xx_HAL_Driver/Src";
+        prefix = "stm32h5xx_hal";
     } else if (board.platform == "g0") {
         hal_driver_path = platform_path + "/Drivers/STM32G0xx_HAL_Driver/Src";
         prefix = "stm32g0xx_hal";

@@ -1,6 +1,32 @@
 #include "i2c.h"
 
-I2C::I2C(I2C_TypeDef* i2c_instance) : i2c_handle_{}
+// Helper function to enable GPIO port clock
+static void enableGPIOClock(GPIO_TypeDef* port)
+{
+    if (port == GPIOA) __HAL_RCC_GPIOA_CLK_ENABLE();
+    else if (port == GPIOB) __HAL_RCC_GPIOB_CLK_ENABLE();
+    else if (port == GPIOC) __HAL_RCC_GPIOC_CLK_ENABLE();
+    else if (port == GPIOD) __HAL_RCC_GPIOD_CLK_ENABLE();
+    else if (port == GPIOE) __HAL_RCC_GPIOE_CLK_ENABLE();
+    else if (port == GPIOF) __HAL_RCC_GPIOF_CLK_ENABLE();
+#ifdef GPIOG
+    else if (port == GPIOG) __HAL_RCC_GPIOG_CLK_ENABLE();
+#endif
+#ifdef GPIOH
+    else if (port == GPIOH) __HAL_RCC_GPIOH_CLK_ENABLE();
+#endif
+}
+
+I2C::I2C(I2C_TypeDef* i2c_instance,
+         GPIO_TypeDef* scl_port, uint16_t scl_pin,
+         GPIO_TypeDef* sda_port, uint16_t sda_pin,
+         uint32_t alternate_function)
+    : i2c_handle_{},
+      scl_port_(scl_port),
+      scl_pin_(scl_pin),
+      sda_port_(sda_port),
+      sda_pin_(sda_pin),
+      alternate_function_(alternate_function)
 {
     // Initialize I2C handle with default values
     i2c_handle_.Instance = i2c_instance;
@@ -18,6 +44,45 @@ I2C::I2C(I2C_TypeDef* i2c_instance) : i2c_handle_{}
 
 void I2C::begin(const uint32_t clock_speed)
 {
+    // Enable GPIO port clocks
+    enableGPIOClock(scl_port_);
+    enableGPIOClock(sda_port_);
+
+    // Configure GPIO pins for I2C
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;  // Open-drain for I2C
+    GPIO_InitStruct.Pull = GPIO_PULLUP;       // Pull-up required for I2C
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate = alternate_function_;
+
+    // Configure SCL pin
+    GPIO_InitStruct.Pin = scl_pin_;
+    HAL_GPIO_Init(scl_port_, &GPIO_InitStruct);
+
+    // Configure SDA pin
+    GPIO_InitStruct.Pin = sda_pin_;
+    HAL_GPIO_Init(sda_port_, &GPIO_InitStruct);
+
+    // Enable I2C peripheral clock
+    if (i2c_handle_.Instance == I2C1) {
+        __HAL_RCC_I2C1_CLK_ENABLE();
+    }
+#ifdef I2C2
+    else if (i2c_handle_.Instance == I2C2) {
+        __HAL_RCC_I2C2_CLK_ENABLE();
+    }
+#endif
+#ifdef I2C3
+    else if (i2c_handle_.Instance == I2C3) {
+        __HAL_RCC_I2C3_CLK_ENABLE();
+    }
+#endif
+#ifdef I2C4
+    else if (i2c_handle_.Instance == I2C4) {
+        __HAL_RCC_I2C4_CLK_ENABLE();
+    }
+#endif
+
     // Set timing for requested clock speed
     i2c_handle_.Init.Timing = calculateTiming(clock_speed);
 
@@ -35,6 +100,10 @@ void I2C::begin(const uint32_t clock_speed)
 void I2C::end()
 {
     HAL_I2C_DeInit(&i2c_handle_);
+
+    // Deinitialize GPIO pins
+    HAL_GPIO_DeInit(scl_port_, scl_pin_);
+    HAL_GPIO_DeInit(sda_port_, sda_pin_);
 }
 
 uint32_t I2C::calculateTiming(uint32_t clock_speed)

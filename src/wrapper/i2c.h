@@ -1,7 +1,24 @@
 #pragma once
 
-#include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_i2c.h"
+// Platform-specific HAL headers
+#if defined(STM32H7)
+    #include "stm32h7xx_hal.h"
+    #include "stm32h7xx_hal_i2c.h"
+#elif defined(STM32G0)
+    #include "stm32g0xx_hal.h"
+    #include "stm32g0xx_hal_i2c.h"
+#elif defined(STM32G4)
+    #include "stm32g4xx_hal.h"
+    #include "stm32g4xx_hal_i2c.h"
+#elif defined(STM32F4)
+    #include "stm32f4xx_hal.h"
+    #include "stm32f4xx_hal_i2c.h"
+#elif defined(STM32H5)
+    #include "stm32h5xx_hal.h"
+    #include "stm32h5xx_hal_i2c.h"
+#else
+    #error "Unsupported STM32 platform. Define STM32H7, STM32G0, STM32G4, STM32F4, or STM32H5."
+#endif
 
 // I2C Class - Inter-Integrated Circuit
 // Usage Example:
@@ -22,9 +39,19 @@ class I2C
 private:
     I2C_HandleTypeDef i2c_handle_;
 
+    // GPIO configuration
+    GPIO_TypeDef* scl_port_;
+    uint16_t scl_pin_;
+    GPIO_TypeDef* sda_port_;
+    uint16_t sda_pin_;
+    uint32_t alternate_function_;
+
 public:
     I2C() = delete;
-    I2C(I2C_TypeDef* i2c_instance);
+    I2C(I2C_TypeDef* i2c_instance,
+        GPIO_TypeDef* scl_port, uint16_t scl_pin,
+        GPIO_TypeDef* sda_port, uint16_t sda_pin,
+        uint32_t alternate_function);
 
     void begin(const uint32_t clock_speed = 100000);
     void end();

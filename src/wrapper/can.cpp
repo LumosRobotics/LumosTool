@@ -1,6 +1,32 @@
 #include "can.h"
 
-CAN::CAN(FDCAN_GlobalTypeDef* fdcan_instance) : fdcan_handle_{}
+// Helper function to enable GPIO port clock
+static void enableGPIOClock(GPIO_TypeDef* port)
+{
+    if (port == GPIOA) __HAL_RCC_GPIOA_CLK_ENABLE();
+    else if (port == GPIOB) __HAL_RCC_GPIOB_CLK_ENABLE();
+    else if (port == GPIOC) __HAL_RCC_GPIOC_CLK_ENABLE();
+    else if (port == GPIOD) __HAL_RCC_GPIOD_CLK_ENABLE();
+    else if (port == GPIOE) __HAL_RCC_GPIOE_CLK_ENABLE();
+    else if (port == GPIOF) __HAL_RCC_GPIOF_CLK_ENABLE();
+#ifdef GPIOG
+    else if (port == GPIOG) __HAL_RCC_GPIOG_CLK_ENABLE();
+#endif
+#ifdef GPIOH
+    else if (port == GPIOH) __HAL_RCC_GPIOH_CLK_ENABLE();
+#endif
+}
+
+CAN::CAN(FDCAN_GlobalTypeDef* fdcan_instance,
+         GPIO_TypeDef* tx_port, uint16_t tx_pin,
+         GPIO_TypeDef* rx_port, uint16_t rx_pin,
+         uint32_t alternate_function)
+    : fdcan_handle_{},
+      tx_port_(tx_port),
+      tx_pin_(tx_pin),
+      rx_port_(rx_port),
+      rx_pin_(rx_pin),
+      alternate_function_(alternate_function)
 {
     // Initialize FDCAN handle with default values
     fdcan_handle_.Instance = fdcan_instance;
@@ -26,7 +52,9 @@ CAN::CAN(FDCAN_GlobalTypeDef* fdcan_instance) : fdcan_handle_{}
     fdcan_handle_.Init.DataTimeSeg1 = 1;
     fdcan_handle_.Init.DataTimeSeg2 = 1;
 
-    // Message RAM Configuration
+    // Message RAM Configuration - platform specific
+#if defined(STM32H7) || defined(STM32H5)
+    // STM32H7/H5 has detailed Message RAM configuration
     fdcan_handle_.Init.MessageRAMOffset = 0;
     fdcan_handle_.Init.StdFiltersNbr = 1;
     fdcan_handle_.Init.ExtFiltersNbr = 1;
@@ -39,10 +67,49 @@ CAN::CAN(FDCAN_GlobalTypeDef* fdcan_instance) : fdcan_handle_{}
     fdcan_handle_.Init.TxFifoQueueElmtsNbr = 8;
     fdcan_handle_.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
     fdcan_handle_.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
+#elif defined(STM32G0) || defined(STM32G4)
+    // STM32G0/G4 has minimal FDCAN configuration - most RAM config is automatic
+    fdcan_handle_.Init.StdFiltersNbr = 1;
+    fdcan_handle_.Init.ExtFiltersNbr = 1;
+#endif
 }
 
 void CAN::begin(const uint32_t bitrate)
 {
+    // Enable GPIO port clocks
+    enableGPIOClock(tx_port_);
+    enableGPIOClock(rx_port_);
+
+    // Configure GPIO pins for FDCAN
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = alternate_function_;
+
+    // Configure TX pin
+    GPIO_InitStruct.Pin = tx_pin_;
+    HAL_GPIO_Init(tx_port_, &GPIO_InitStruct);
+
+    // Configure RX pin
+    GPIO_InitStruct.Pin = rx_pin_;
+    HAL_GPIO_Init(rx_port_, &GPIO_InitStruct);
+
+    // Enable FDCAN peripheral clock
+    if (fdcan_handle_.Instance == FDCAN1) {
+        __HAL_RCC_FDCAN_CLK_ENABLE();
+    }
+#ifdef FDCAN2
+    else if (fdcan_handle_.Instance == FDCAN2) {
+        __HAL_RCC_FDCAN_CLK_ENABLE();
+    }
+#endif
+#ifdef FDCAN3
+    else if (fdcan_handle_.Instance == FDCAN3) {
+        __HAL_RCC_FDCAN_CLK_ENABLE();
+    }
+#endif
+
     // Calculate prescaler for desired bitrate (assuming 80 MHz kernel clock)
     // Bitrate = ClockFreq / (Prescaler * (SyncJumpWidth + TimeSeg1 + TimeSeg2))
     // For simplicity, use fixed time segments and calculate prescaler
@@ -67,6 +134,10 @@ void CAN::end()
 {
     HAL_FDCAN_Stop(&fdcan_handle_);
     HAL_FDCAN_DeInit(&fdcan_handle_);
+
+    // Deinitialize GPIO pins
+    HAL_GPIO_DeInit(tx_port_, tx_pin_);
+    HAL_GPIO_DeInit(rx_port_, rx_pin_);
 }
 
 bool CAN::send(uint32_t id, const uint8_t* data, uint8_t length, bool extended)

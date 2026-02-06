@@ -9,22 +9,50 @@ static void enableGPIOClock(GPIO_TypeDef* port)
     else if (port == GPIOD) __HAL_RCC_GPIOD_CLK_ENABLE();
     else if (port == GPIOE) __HAL_RCC_GPIOE_CLK_ENABLE();
     else if (port == GPIOF) __HAL_RCC_GPIOF_CLK_ENABLE();
+#ifdef GPIOG
     else if (port == GPIOG) __HAL_RCC_GPIOG_CLK_ENABLE();
+#endif
+#ifdef GPIOH
     else if (port == GPIOH) __HAL_RCC_GPIOH_CLK_ENABLE();
+#endif
 }
 
 // Helper function to enable UART peripheral clock
 static void enableUARTClock(USART_TypeDef* uart)
 {
+#ifdef USART1
     if (uart == USART1) __HAL_RCC_USART1_CLK_ENABLE();
+#endif
+#ifdef USART2
     else if (uart == USART2) __HAL_RCC_USART2_CLK_ENABLE();
+#endif
+#ifdef USART3
     else if (uart == USART3) __HAL_RCC_USART3_CLK_ENABLE();
+#endif
+#ifdef UART4
     else if (uart == UART4) __HAL_RCC_UART4_CLK_ENABLE();
+#endif
+#ifdef UART5
     else if (uart == UART5) __HAL_RCC_UART5_CLK_ENABLE();
+#endif
+#ifdef USART4
+    else if (uart == USART4) __HAL_RCC_USART4_CLK_ENABLE();
+#endif
+#ifdef USART5
+    else if (uart == USART5) __HAL_RCC_USART5_CLK_ENABLE();
+#endif
+#ifdef USART6
     else if (uart == USART6) __HAL_RCC_USART6_CLK_ENABLE();
+#endif
+#ifdef UART7
     else if (uart == UART7) __HAL_RCC_UART7_CLK_ENABLE();
+#endif
+#ifdef UART8
     else if (uart == UART8) __HAL_RCC_UART8_CLK_ENABLE();
+#endif
+#ifdef USART10
     else if (uart == USART10) __HAL_RCC_USART10_CLK_ENABLE();
+#endif
 }
 
 Serial::Serial(USART_TypeDef* usart_def,

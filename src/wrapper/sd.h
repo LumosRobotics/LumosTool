@@ -1,7 +1,29 @@
 #pragma once
 
-#include "stm32h7xx_hal.h"
-#include "stm32h7xx_hal_sd.h"
+// Platform-specific HAL headers
+#if defined(STM32H7)
+    #include "stm32h7xx_hal.h"
+    #include "stm32h7xx_hal_sd.h"
+#elif defined(STM32G0)
+    #include "stm32g0xx_hal.h"
+    // Note: Not all G0 devices have SDMMC peripheral
+    #ifdef HAL_SD_MODULE_ENABLED
+        #include "stm32g0xx_hal_sd.h"
+    #endif
+#elif defined(STM32G4)
+    #include "stm32g4xx_hal.h"
+    #ifdef HAL_SD_MODULE_ENABLED
+        #include "stm32g4xx_hal_sd.h"
+    #endif
+#elif defined(STM32F4)
+    #include "stm32f4xx_hal.h"
+    #include "stm32f4xx_hal_sd.h"
+#elif defined(STM32H5)
+    #include "stm32h5xx_hal.h"
+    #include "stm32h5xx_hal_sd.h"
+#else
+    #error "Unsupported STM32 platform. Define STM32H7, STM32G0, STM32G4, STM32F4, or STM32H5."
+#endif
 
 // SDCard Class - SD Card interface via SDMMC
 // Usage Example:
@@ -22,6 +44,10 @@
 //   // Get card info
 //   uint64_t capacity = sdcard.getCapacity();
 //   uint32_t blockSize = sdcard.getBlockSize();
+
+// SD card class is only available on platforms with SDMMC peripheral
+#ifdef HAL_SD_MODULE_ENABLED
+
 class SDCard
 {
 public:
@@ -41,9 +67,31 @@ private:
     SD_HandleTypeDef sd_handle_;
     bool initialized_;
 
+    // GPIO configuration
+    GPIO_TypeDef* cmd_port_;
+    uint16_t cmd_pin_;
+    GPIO_TypeDef* clk_port_;
+    uint16_t clk_pin_;
+    GPIO_TypeDef* d0_port_;
+    uint16_t d0_pin_;
+    GPIO_TypeDef* d1_port_;
+    uint16_t d1_pin_;
+    GPIO_TypeDef* d2_port_;
+    uint16_t d2_pin_;
+    GPIO_TypeDef* d3_port_;
+    uint16_t d3_pin_;
+    uint32_t alternate_function_;
+
 public:
     SDCard() = delete;
-    SDCard(SDMMC_TypeDef* sdmmc_instance);
+    SDCard(SDMMC_TypeDef* sdmmc_instance,
+           GPIO_TypeDef* cmd_port, uint16_t cmd_pin,
+           GPIO_TypeDef* clk_port, uint16_t clk_pin,
+           GPIO_TypeDef* d0_port, uint16_t d0_pin,
+           GPIO_TypeDef* d1_port, uint16_t d1_pin,
+           GPIO_TypeDef* d2_port, uint16_t d2_pin,
+           GPIO_TypeDef* d3_port, uint16_t d3_pin,
+           uint32_t alternate_function);
 
     // Initialization
     bool begin(BusWidth width = BusWidth::BUS_4BIT);
@@ -80,3 +128,5 @@ public:
 private:
     bool waitReady(uint32_t timeout = 1000);
 };
+
+#endif // HAL_SD_MODULE_ENABLED
