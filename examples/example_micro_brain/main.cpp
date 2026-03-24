@@ -52,6 +52,8 @@ void setup(void)
     digitalWrite(GPIOD, GPIO_PIN_2, false);
     digitalWrite(GPIOA, GPIO_PIN_1, false);
 
+    SerialPgm.begin();
+
     // Record start time
     start_time_ms = GetCurrentTimeMs();
     start_time_us = GetCurrentTimeUs();

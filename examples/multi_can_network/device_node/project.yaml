@@ -1,5 +1,3 @@
 sources:
   - main.cpp
 board: LumosMicroBrain
-hal_modules:
-  - uart

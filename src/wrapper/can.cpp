@@ -142,17 +142,60 @@ void CAN::end()
 
 bool CAN::send(uint32_t id, const uint8_t* data, uint8_t length, bool extended)
 {
-    if (length > 8)
-        return false;
+    // Check if we're in FD mode or Classic mode
+    bool is_fd_mode = (fdcan_handle_.Init.FrameFormat == FDCAN_FRAME_FD_BRS ||
+                       fdcan_handle_.Init.FrameFormat == FDCAN_FRAME_FD_NO_BRS);
+
+    // Validate length based on mode
+    if (is_fd_mode) {
+        if (length > 64) return false;  // CAN FD max is 64 bytes
+    } else {
+        if (length > 8) return false;   // Classic CAN max is 8 bytes
+    }
 
     FDCAN_TxHeaderTypeDef tx_header;
     tx_header.Identifier = id;
     tx_header.IdType = extended ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID;
     tx_header.TxFrameType = FDCAN_DATA_FRAME;
-    tx_header.DataLength = length << 16;  // Convert to FDCAN_DLC format
+
+    // Convert length to DLC format (Data Length Code)
+    // For CAN FD, need to map lengths: 0-8 bytes = DLC 0-8, 12 bytes = DLC 9, etc.
+    if (is_fd_mode) {
+        if (length <= 8) {
+            tx_header.DataLength = length << 16;
+        } else if (length <= 12) {
+            tx_header.DataLength = FDCAN_DLC_BYTES_12;
+        } else if (length <= 16) {
+            tx_header.DataLength = FDCAN_DLC_BYTES_16;
+        } else if (length <= 20) {
+            tx_header.DataLength = FDCAN_DLC_BYTES_20;
+        } else if (length <= 24) {
+            tx_header.DataLength = FDCAN_DLC_BYTES_24;
+        } else if (length <= 32) {
+            tx_header.DataLength = FDCAN_DLC_BYTES_32;
+        } else if (length <= 48) {
+            tx_header.DataLength = FDCAN_DLC_BYTES_48;
+        } else {
+            tx_header.DataLength = FDCAN_DLC_BYTES_64;
+        }
+    } else {
+        tx_header.DataLength = length << 16;
+    }
+
     tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-    tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-    tx_header.FDFormat = FDCAN_CLASSIC_CAN;
+
+    // Set BRS and FD format based on current configuration
+    if (fdcan_handle_.Init.FrameFormat == FDCAN_FRAME_FD_BRS) {
+        tx_header.BitRateSwitch = FDCAN_BRS_ON;
+        tx_header.FDFormat = FDCAN_FD_CAN;
+    } else if (fdcan_handle_.Init.FrameFormat == FDCAN_FRAME_FD_NO_BRS) {
+        tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+        tx_header.FDFormat = FDCAN_FD_CAN;
+    } else {
+        tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+        tx_header.FDFormat = FDCAN_CLASSIC_CAN;
+    }
+
     tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     tx_header.MessageMarker = 0;
 

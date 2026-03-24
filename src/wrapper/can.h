@@ -75,6 +75,33 @@ public:
         return *this;
     }
 
+    CAN& setDataBitrate(const uint32_t prescaler, const uint32_t seg1, const uint32_t seg2)
+    {
+        fdcan_handle_.Init.DataPrescaler = prescaler;
+        fdcan_handle_.Init.DataTimeSeg1 = seg1;
+        fdcan_handle_.Init.DataTimeSeg2 = seg2;
+        HAL_FDCAN_Init(&fdcan_handle_);
+        return *this;
+    }
+
+    CAN& enableFD(bool enable_brs = true)
+    {
+        if (enable_brs) {
+            fdcan_handle_.Init.FrameFormat = FDCAN_FRAME_FD_BRS;  // FD with Bit Rate Switching
+        } else {
+            fdcan_handle_.Init.FrameFormat = FDCAN_FRAME_FD_NO_BRS;  // FD without BRS
+        }
+        HAL_FDCAN_Init(&fdcan_handle_);
+        return *this;
+    }
+
+    CAN& disableFD()
+    {
+        fdcan_handle_.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
+        HAL_FDCAN_Init(&fdcan_handle_);
+        return *this;
+    }
+
     // Message transmission
     bool send(uint32_t id, const uint8_t* data, uint8_t length, bool extended = false);
     bool sendRemote(uint32_t id, bool extended = false);
