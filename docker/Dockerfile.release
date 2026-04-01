@@ -1,0 +1,66 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 – builder
+#   Compiles yaml-cpp (from the in-tree submodule) and the lumos binary.
+#   Requires that submodules are initialised before building this image:
+#     git submodule update --init third_party/yaml-cpp third_party/googletest
+# ─────────────────────────────────────────────────────────────────────────────
+FROM quay.io/pypa/manylinux2014_x86_64 AS builder
+
+# Install cmake + ninja via the bundled Python (yum cmake3 is too old)
+RUN /opt/python/cp311-cp311/bin/pip install --quiet "cmake>=3.14" ninja
+
+# Activate devtoolset-11 for C++17 support (pre-installed in manylinux2014)
+ENV PATH=/opt/rh/devtoolset-11/root/usr/bin:/opt/python/cp311-cp311/bin:$PATH
+
+WORKDIR /src
+
+# Copy only what the build needs, keeping the layer small and cache-friendly.
+COPY third_party/nlohmann    third_party/nlohmann
+COPY third_party/yaml-cpp    third_party/yaml-cpp
+COPY src/                    src/
+COPY CMakeLists.txt          .
+
+# ── Build yaml-cpp from the submodule ────────────────────────────────────────
+RUN cmake -S third_party/yaml-cpp -B third_party/yaml-cpp/build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DYAML_CPP_BUILD_TESTS=OFF \
+        -DYAML_CPP_BUILD_TOOLS=OFF \
+        -DYAML_BUILD_SHARED_LIBS=OFF \
+    && cmake --build third_party/yaml-cpp/build -j"$(nproc)"
+
+# ── Build lumos (release binary) ─────────────────────────────────────────────
+# -pthread is required explicitly on manylinux2014 (not auto-linked like Ubuntu)
+RUN cmake -S . -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLUMOS_OFFICIAL_RELEASE=ON \
+        -DENABLE_DEBUG_PORT=OFF \
+        -DCMAKE_CXX_FLAGS="-pthread" \
+        -DCMAKE_EXE_LINKER_FLAGS="-pthread" \
+    && cmake --build build -j"$(nproc)" --target lumos_target
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 – release image
+#   Ubuntu with the lumos binary and the ARM cross-compiler so the tool can
+#   actually compile firmware when run inside this container.
+#   Note: the binary was compiled in stage 1 (manylinux2014/glibc 2.17) so it
+#   remains portable regardless of this stage's base image.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+        gcc-arm-none-eabi \
+        binutils-arm-none-eabi \
+        libnewlib-arm-none-eabi \
+        libstdc++-arm-none-eabi-newlib \
+        python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src/build/src/applications/lumos_simple/lumos /usr/local/bin/lumos
+
+# Mount your project directory here when running the container.
+WORKDIR /project
+
+ENTRYPOINT ["lumos"]
+CMD ["--help"]

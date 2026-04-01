@@ -1,0 +1,40 @@
+# Builds a fully static lumos binary using musl libc on Alpine Linux.
+# The resulting binary has zero shared-library dependencies and runs on any
+# Linux distro (glibc or musl) with a kernel >= 3.2, including Alpine,
+# Void Linux, and minimal/embedded environments.
+#
+# Requires that submodules are initialised before building this image:
+#   git submodule update --init third_party/yaml-cpp
+
+FROM alpine:3.19
+
+RUN apk add --no-cache \
+        cmake \
+        make \
+        g++ \
+        musl-dev \
+        linux-headers
+
+WORKDIR /src
+
+COPY third_party/nlohmann    third_party/nlohmann
+COPY third_party/yaml-cpp    third_party/yaml-cpp
+COPY src/                    src/
+COPY CMakeLists.txt          .
+
+# ── Build yaml-cpp (static) ───────────────────────────────────────────────────
+RUN cmake -S third_party/yaml-cpp -B third_party/yaml-cpp/build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DYAML_CPP_BUILD_TESTS=OFF \
+        -DYAML_CPP_BUILD_TOOLS=OFF \
+        -DYAML_BUILD_SHARED_LIBS=OFF \
+    && cmake --build third_party/yaml-cpp/build -j"$(nproc)"
+
+# ── Build lumos (fully static) ────────────────────────────────────────────────
+# -static pulls in musl, libstdc++, and libgcc all statically.
+RUN cmake -S . -B build \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLUMOS_OFFICIAL_RELEASE=ON \
+        -DENABLE_DEBUG_PORT=OFF \
+        -DCMAKE_EXE_LINKER_FLAGS="-static" \
+    && cmake --build build -j"$(nproc)" --target lumos_target

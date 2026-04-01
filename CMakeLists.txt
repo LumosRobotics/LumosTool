@@ -34,14 +34,6 @@ else()
     message(STATUS "Building DEVELOPMENT version")
 endif()
 
-# Googletest
-link_directories(${CMAKE_SOURCE_DIR}/third_party/googletest/lib)
-include_directories(${CMAKE_SOURCE_DIR}/third_party/googletest/googletest/include)
-
-set(GTEST_LIB_FILES libgtest.a
-                    libgtest_main.a
-                    pthread)
-
 # Nlohmann
 include_directories(${CMAKE_SOURCE_DIR}/third_party/nlohmann/include)
 
@@ -68,4 +60,14 @@ if(Qt6_FOUND)
     add_subdirectory(src/applications/serial_gui)
 else()
     message(STATUS "Qt6 not found – skipping serial_gui")
+endif()
+
+# ── Install rules (used by cmake --install, e.g. for future build-from-source distribution) ──
+install(TARGETS lumos_target simple_serial RUNTIME DESTINATION bin)
+
+if(Qt6_FOUND)
+    install(TARGETS serial_gui
+        BUNDLE  DESTINATION .    # macOS .app bundle
+        RUNTIME DESTINATION bin  # Linux/Windows binary
+    )
 endif()

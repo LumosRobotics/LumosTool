@@ -1,0 +1,24 @@
+# Build artefacts
+build/
+release/
+third_party/yaml-cpp/build/
+third_party/googletest/build/
+
+# Pre-built platform toolchains (Mac/Windows binaries, not needed in Docker)
+src/toolchains/gcc-arm-none-eabi*/
+src/toolchains/*_original/
+
+# Git
+.git/
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

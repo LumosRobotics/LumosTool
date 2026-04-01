@@ -183,7 +183,8 @@ def build_for_architecture(arch):
         "-DCMAKE_BUILD_TYPE=Release",
         f"-DCMAKE_OSX_ARCHITECTURES={arch}",
         "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15",
-        "-DLUMOS_OFFICIAL_RELEASE=ON"  # Mark as official release build
+        "-DLUMOS_OFFICIAL_RELEASE=ON",  # Mark as official release build
+        "-DCMAKE_DISABLE_FIND_PACKAGE_Qt6=ON",  # Skip Qt6 GUI for release builds
     ]
 
     # Configure

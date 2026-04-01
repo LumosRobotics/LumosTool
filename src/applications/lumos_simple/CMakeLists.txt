@@ -11,6 +11,32 @@ set(LUMOS_SOURCES
 )
 
 # Create executable with temporary name
+# ── yaml-cpp ──────────────────────────────────────────────────────────────────
+# Prefer a system/prefix installation (e.g. Homebrew). Falls back to the
+# in-tree submodule build for the Docker / macOS dev workflow.
+find_package(yaml-cpp QUIET)
+
+if(NOT yaml-cpp_FOUND)
+    set(_YAML_INC "${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/include")
+    set(_YAML_LIB "${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/build/libyaml-cpp.a")
+
+    if(EXISTS "${_YAML_LIB}")
+        message(STATUS "yaml-cpp: using submodule build at ${_YAML_LIB}")
+        add_library(yaml-cpp::yaml-cpp STATIC IMPORTED)
+        set_target_properties(yaml-cpp::yaml-cpp PROPERTIES
+            IMPORTED_LOCATION "${_YAML_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${_YAML_INC}"
+            # On Windows, yaml-cpp headers use __declspec(dllimport) by default.
+            # This define suppresses that so the static lib links correctly.
+            INTERFACE_COMPILE_DEFINITIONS "YAML_CPP_STATIC_DEFINE"
+        )
+    else()
+        message(FATAL_ERROR
+            "yaml-cpp not found. Install it (e.g. brew install yaml-cpp) or "
+            "build the submodule (run docker/setup_deps.sh).")
+    endif()
+endif()
+
 add_executable(lumos_target ${LUMOS_SOURCES})
 
 # Set binary name based on build type
@@ -28,7 +54,6 @@ endif()
 target_include_directories(lumos_target
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/include
 )
 
 # Set C++ standard
@@ -37,9 +62,9 @@ target_compile_features(lumos_target PRIVATE cxx_std_17)
 # Link with yaml-cpp, serial library, and filesystem library
 target_link_libraries(lumos_target
     lumos_serial
-    ${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/build/libyaml-cpp.a
+    yaml-cpp::yaml-cpp
 )
 
-if(NOT APPLE)
+if(UNIX AND NOT APPLE)
     target_link_libraries(lumos_target stdc++fs)
 endif()

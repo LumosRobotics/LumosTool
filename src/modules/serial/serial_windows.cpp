@@ -2,6 +2,9 @@
 #include <cstring>
 #include <iostream>
 #include <windows.h>
+// windows.h defines ConfigurePort as ConfigurePortA (ANSI thunk), which
+// conflicts with the Serial::ConfigurePort() private method.
+#undef ConfigurePort
 
 namespace SimpleSerial {
 
@@ -361,7 +364,7 @@ PortStatus Serial::CheckPortStatus(const std::string& port_name) {
     }
 
     // Check why it failed
-    DWORD error = GetLastError();
+    DWORD error = ::GetLastError();  // Qualify to avoid clash with Serial::GetLastError()
     if (error == ERROR_ACCESS_DENIED) {
         return PortStatus::IN_USE;  // Usually means another process has it open
     } else if (error == ERROR_FILE_NOT_FOUND) {

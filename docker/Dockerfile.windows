@@ -1,0 +1,49 @@
+# Cross-compiles lumos.exe for Windows x86-64 using MinGW-w64.
+# Requires that submodules are initialised before building this image:
+#   git submodule update --init third_party/yaml-cpp
+#
+# The resulting image is only used to extract lumos.exe; it is not a
+# runnable Windows environment.
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+        cmake \
+        ninja-build \
+        gcc-mingw-w64-x86-64 \
+        g++-mingw-w64-x86-64 \
+        binutils-mingw-w64-x86-64 \
+    && rm -rf /var/lib/apt/lists/* \
+    # Ubuntu ships two MinGW thread models: win32 (default) and posix.
+    # The posix model is required for std::thread / std::mutex support.
+    && update-alternatives --set x86_64-w64-mingw32-gcc \
+           /usr/bin/x86_64-w64-mingw32-gcc-posix \
+    && update-alternatives --set x86_64-w64-mingw32-g++ \
+           /usr/bin/x86_64-w64-mingw32-g++-posix
+
+WORKDIR /src
+
+COPY docker/mingw-w64-x86_64.cmake /toolchain.cmake
+COPY third_party/nlohmann           third_party/nlohmann
+COPY third_party/yaml-cpp           third_party/yaml-cpp
+COPY src/                           src/
+COPY CMakeLists.txt                 .
+
+# ── Build yaml-cpp for Windows ────────────────────────────────────────────────
+RUN cmake -S third_party/yaml-cpp -B third_party/yaml-cpp/build \
+        -DCMAKE_TOOLCHAIN_FILE=/toolchain.cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DYAML_CPP_BUILD_TESTS=OFF \
+        -DYAML_CPP_BUILD_TOOLS=OFF \
+        -DYAML_BUILD_SHARED_LIBS=OFF \
+    && cmake --build third_party/yaml-cpp/build -j"$(nproc)"
+
+# ── Build lumos.exe ───────────────────────────────────────────────────────────
+RUN cmake -S . -B build \
+        -DCMAKE_TOOLCHAIN_FILE=/toolchain.cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLUMOS_OFFICIAL_RELEASE=ON \
+        -DENABLE_DEBUG_PORT=OFF \
+    && cmake --build build -j"$(nproc)" --target lumos_target

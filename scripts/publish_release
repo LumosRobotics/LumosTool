@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Builds macOS, Linux, and Windows releases, publishes them to GitHub, and
+# updates the Homebrew formula.
+#
+# Usage: ./scripts/publish_release [--notes "Release notes"]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+HOMEBREW_REPO="$(cd "$REPO_ROOT/../homebrew-tools" && pwd)"
+FORMULA="$HOMEBREW_REPO/Formula/lumos.rb"
+GITHUB_REPO="LumosRobotics/LumosTool"
+
+# Optional release notes passed as argument
+RELEASE_NOTES="${1:-}"
+
+# ── Read version from the release script ──────────────────────────────────────
+VERSION=$(python3 -c "
+import re, pathlib
+src = pathlib.Path('$SCRIPT_DIR/create_macos_release.py').read_text()
+print(re.search(r'^VERSION = \"(.+?)\"', src, re.M).group(1))
+")
+echo "==> Version: $VERSION"
+
+MACOS_TARBALL="$REPO_ROOT/release/lumos-macos-${VERSION}.tar.gz"
+LINUX_TARBALL="$REPO_ROOT/release/lumos-linux-${VERSION}.tar.gz"
+LINUX_MUSL_TARBALL="$REPO_ROOT/release/lumos-linux-musl-${VERSION}.tar.gz"
+WINDOWS_ZIP="$REPO_ROOT/release/lumos-windows-${VERSION}.zip"
+SHA256_FILE="${MACOS_TARBALL}.sha256"
+
+# ── Step 1: Build all release packages ────────────────────────────────────────
+echo ""
+echo "==> Building macOS release..."
+python3 "$SCRIPT_DIR/create_macos_release.py"
+
+echo ""
+echo "==> Building Linux (glibc/manylinux2014) release..."
+python3 "$SCRIPT_DIR/create_linux_release.py"
+
+echo ""
+echo "==> Building Linux (musl/static) release..."
+python3 "$SCRIPT_DIR/create_linux_musl_release.py"
+
+echo ""
+echo "==> Building Windows release..."
+python3 "$SCRIPT_DIR/create_windows_release.py"
+
+# ── Step 2: Publish to GitHub Releases ────────────────────────────────────────
+echo ""
+echo "==> Creating GitHub release v${VERSION}..."
+
+GH_FLAGS=(
+    --repo "$GITHUB_REPO"
+    --title "v${VERSION}"
+)
+
+if [ -n "$RELEASE_NOTES" ]; then
+    GH_FLAGS+=(--notes "$RELEASE_NOTES")
+else
+    GH_FLAGS+=(--generate-notes)
+fi
+
+gh release create "v${VERSION}" \
+    "$MACOS_TARBALL" \
+    "$LINUX_TARBALL" \
+    "$LINUX_MUSL_TARBALL" \
+    "$WINDOWS_ZIP" \
+    "${GH_FLAGS[@]}"
+
+# ── Step 3: Read SHA256 ────────────────────────────────────────────────────────
+SHA256=$(awk '{print $1}' "$SHA256_FILE")
+echo ""
+echo "==> SHA256: $SHA256"
+
+# ── Step 4: Update the Homebrew formula ───────────────────────────────────────
+echo ""
+echo "==> Updating formula at $FORMULA..."
+
+python3 - <<PYEOF
+import re, pathlib
+
+formula = pathlib.Path("$FORMULA")
+content = formula.read_text()
+
+content = re.sub(r'version "[^"]+"',  'version "$VERSION"',  content)
+content = re.sub(r'url "[^"]+"',
+    'url "https://github.com/$GITHUB_REPO/releases/download/v$VERSION/lumos-macos-$VERSION.tar.gz"',
+    content)
+content = re.sub(r'sha256 "[^"]+"', 'sha256 "$SHA256"', content)
+
+formula.write_text(content)
+print("    formula updated")
+PYEOF
+
+# ── Step 5: Commit and push homebrew-tools ────────────────────────────────────
+echo ""
+echo "==> Committing and pushing homebrew-tools..."
+cd "$HOMEBREW_REPO"
+git add Formula/lumos.rb
+git commit -m "lumos ${VERSION}"
+git push
+
+# ── Done ──────────────────────────────────────────────────────────────────────
+cd "$REPO_ROOT"
+echo ""
+echo "==> Done! Release v${VERSION} is live."
+echo "    https://github.com/${GITHUB_REPO}/releases/tag/v${VERSION}"
