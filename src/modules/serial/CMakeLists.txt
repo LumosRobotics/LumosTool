@@ -14,11 +14,13 @@ endif()
 set(SERIAL_SOURCES
     ${SERIAL_IMPL}
     stm32_communicator.cpp
+    lumos_bootloader.cpp
 )
 
 set(SERIAL_HEADERS
     serial.h
     stm32_communicator.h
+    lumos_bootloader.h
 )
 
 # Create static library
