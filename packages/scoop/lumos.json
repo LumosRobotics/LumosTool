@@ -1,0 +1,19 @@
+{
+    "version": "1.0.0",
+    "description": "CLI build tool for STM32 embedded systems (lumos_brain, lumos_micro_brain)",
+    "homepage": "https://github.com/LumosRobotics/LumosTool",
+    "license": "MIT",
+    "url": "https://github.com/LumosRobotics/LumosTool/releases/download/v1.0.0/lumos-windows-1.0.0.zip",
+    "hash": "0756c0b302385e4a3a3e9d9e18d88f581f629195ce4bbc513ccfec650c53ec46",
+    "extract_dir": "lumos-windows-1.0.0",
+    "bin": "bin\\lumos.exe",
+    "checkver": {
+        "github": "https://github.com/LumosRobotics/LumosTool"
+    },
+    "autoupdate": {
+        "url": "https://github.com/LumosRobotics/LumosTool/releases/download/v$version/lumos-windows-$version.zip",
+        "hash": {
+            "url": "$url.sha256"
+        }
+    }
+}

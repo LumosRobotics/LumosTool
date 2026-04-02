@@ -1,0 +1,23 @@
+PackageIdentifier: LumosRobotics.Lumos
+PackageVersion: 1.0.0
+PackageLocale: en-US
+Publisher: LumosRobotics
+PublisherUrl: https://github.com/LumosRobotics
+PublisherSupportUrl: https://github.com/LumosRobotics/LumosTool/issues
+PackageName: Lumos
+PackageUrl: https://github.com/LumosRobotics/LumosTool
+License: MIT
+LicenseUrl: https://github.com/LumosRobotics/LumosTool/blob/main/LICENSE
+ShortDescription: CLI build tool for STM32 embedded systems
+Description: |-
+  Lumos is a CLI toolchain for building, flashing, and monitoring STM32-based
+  embedded systems. It supports the lumos_brain (STM32H7), lumos_micro_brain
+  (STM32G0), and sx1281_module (STM32H5) boards with an Arduino-compatible API.
+Tags:
+- embedded
+- stm32
+- arm
+- firmware
+- cli
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

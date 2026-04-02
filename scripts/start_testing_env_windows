@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# Starts an interactive Windows cross-compilation dev/test environment for Lumos.
+#
+# - Builds lumos-windows-builder (MinGW-w64 cross-compiler) if not already built
+# - Builds lumos-windows-dev (adds Wine) if not already built
+# - Mounts the project root into /workspace inside the container
+# - You can cross-compile lumos.exe and run it via Wine for testing
+#
+# Usage: ./scripts/start_testing_env_windows [--no-wine] [--rebuild]
+#   --no-wine   Skip Wine installation (faster, but can't run the .exe)
+#   --rebuild   Force a rebuild of both Docker images
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+BUILDER_IMAGE="lumos-windows-builder"
+DEV_IMAGE="lumos-windows-dev"
+BUILDER_DOCKERFILE="$REPO_ROOT/docker/Dockerfile.windows"
+DEV_DOCKERFILE="$REPO_ROOT/docker/Dockerfile.windows-dev"
+
+USE_WINE=true
+FORCE_REBUILD=false
+for arg in ${@+"$@"}; do
+    case "$arg" in
+        --no-wine)  USE_WINE=false ;;
+        --rebuild)  FORCE_REBUILD=true ;;
+    esac
+done
+
+# Returns true if the image is older than the given Dockerfile
+image_is_stale() {
+    local image="$1"
+    local dockerfile="$2"
+    if ! docker image inspect "$image" &>/dev/null; then
+        return 0
+    fi
+    local image_ts dockerfile_ts
+    image_ts=$(docker image inspect "$image" --format '{{.Created}}')
+    image_ts=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${image_ts%%.*}" "+%s" 2>/dev/null \
+               || date -d "$image_ts" "+%s")
+    dockerfile_ts=$(stat -f "%m" "$dockerfile" 2>/dev/null \
+                    || stat -c "%Y" "$dockerfile")
+    [[ "$dockerfile_ts" -gt "$image_ts" ]]
+}
+
+build_if_needed() {
+    local image="$1"
+    local dockerfile="$2"
+    local label="$3"
+    if $FORCE_REBUILD || image_is_stale "$image" "$dockerfile"; then
+        echo "==> Building $image ($label)..."
+        docker build -f "$dockerfile" -t "$image" "$REPO_ROOT"
+        echo "==> $image built."
+    else
+        echo "==> $image is up to date, skipping."
+    fi
+}
+
+# ── Step 1: Build the Windows builder image if needed ─────────────────────────
+build_if_needed "$BUILDER_IMAGE" "$BUILDER_DOCKERFILE" "MinGW-w64 cross-compiler"
+
+# ── Step 2: Build the dev image (adds Wine) if needed ─────────────────────────
+if $USE_WINE; then
+    build_if_needed "$DEV_IMAGE" "$DEV_DOCKERFILE" "adds Wine for running .exe"
+    RUN_IMAGE="$DEV_IMAGE"
+else
+    RUN_IMAGE="$BUILDER_IMAGE"
+fi
+
+# ── Step 3: Start interactive container ───────────────────────────────────────
+echo ""
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║      Lumos Windows Cross-Compilation Dev Environment     ║"
+echo "╠══════════════════════════════════════════════════════════╣"
+echo "║  Project root → /workspace                               ║"
+echo "║  Toolchain:     /toolchain.cmake (MinGW-w64 x86-64)      ║"
+if $USE_WINE; then
+echo "║  Wine:          available (wine lumos.exe)                ║"
+fi
+echo "║                                                          ║"
+echo "║  Build lumos.exe:                                        ║"
+echo "║    cmake -S third_party/yaml-cpp \\                       ║"
+echo "║      -B third_party/yaml-cpp/build_windows \\             ║"
+echo "║      -DCMAKE_TOOLCHAIN_FILE=/toolchain.cmake \\           ║"
+echo "║      -DYAML_CPP_BUILD_TESTS=OFF                          ║"
+echo "║    cmake --build third_party/yaml-cpp/build_windows      ║"
+echo "║    cmake -S . -B build                   \\               ║"
+echo "║      -DCMAKE_TOOLCHAIN_FILE=/toolchain.cmake \\           ║"
+echo "║      -DCMAKE_BUILD_TYPE=Release                          ║"
+echo "║    cmake --build build -j\$(nproc) --target lumos_target  ║"
+echo "║                                                          ║"
+if $USE_WINE; then
+echo "║  Run lumos.exe via Wine (headless):                      ║"
+echo "║    xvfb-run wine build/src/applications/           \\     ║"
+echo "║      lumos_simple/lumos_dev.exe --version                ║"
+fi
+echo "╚══════════════════════════════════════════════════════════╝"
+echo ""
+
+docker run -it --rm \
+    --name "lumos-windows-dev" \
+    -v "$REPO_ROOT:/workspace" \
+    -w /workspace \
+    "$RUN_IMAGE" \
+    bash

@@ -1,0 +1,20 @@
+# Development/testing environment for Lumos on Linux.
+# Extends the release image (ubuntu:22.04 + ARM toolchain) with the build
+# tools needed to compile lumos itself from a mounted source tree.
+#
+# Built and started automatically by scripts/start_testing_env_linux.
+
+FROM lumos-linux-builder
+
+RUN apt-get update && apt-get install -y \
+        cmake \
+        build-essential \
+        ninja-build \
+        git \
+        libyaml-cpp-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Override the release image entrypoint so we get an interactive shell.
+ENTRYPOINT []
+WORKDIR /workspace
+CMD ["bash"]

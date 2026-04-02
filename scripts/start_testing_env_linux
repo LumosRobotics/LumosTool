@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Starts an interactive Linux dev/test environment for Lumos.
+#
+# - Builds lumos-linux-builder (release image) if not already built
+# - Builds lumos-linux-dev (dev image) on top of it if not already built
+# - Mounts the project root into /workspace inside the container
+# - Changes to host files under the repo are immediately visible inside
+#
+# Usage: ./scripts/start_testing_env_linux [--rebuild]
+#   --rebuild   Force a rebuild of both Docker images
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+RELEASE_IMAGE="lumos-linux-builder"
+DEV_IMAGE="lumos-linux-dev"
+RELEASE_DOCKERFILE="$REPO_ROOT/docker/Dockerfile.release"
+DEV_DOCKERFILE="$REPO_ROOT/docker/Dockerfile.linux-dev"
+
+FORCE_REBUILD=false
+if [[ "${1:-}" == "--rebuild" ]]; then
+    FORCE_REBUILD=true
+fi
+
+# Returns true if the image is older than the given Dockerfile
+image_is_stale() {
+    local image="$1"
+    local dockerfile="$2"
+    # If image doesn't exist, it's stale
+    if ! docker image inspect "$image" &>/dev/null; then
+        return 0
+    fi
+    # Compare image creation time vs Dockerfile modification time
+    local image_ts dockerfile_ts
+    image_ts=$(docker image inspect "$image" --format '{{.Created}}')
+    image_ts=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${image_ts%%.*}" "+%s" 2>/dev/null \
+               || date -d "$image_ts" "+%s")
+    dockerfile_ts=$(stat -f "%m" "$dockerfile" 2>/dev/null \
+                    || stat -c "%Y" "$dockerfile")
+    [[ "$dockerfile_ts" -gt "$image_ts" ]]
+}
+
+build_if_needed() {
+    local image="$1"
+    local dockerfile="$2"
+    local label="$3"
+    if $FORCE_REBUILD || image_is_stale "$image" "$dockerfile"; then
+        echo "==> Building $image ($label)..."
+        docker build -f "$dockerfile" -t "$image" "$REPO_ROOT"
+        echo "==> $image built."
+    else
+        echo "==> $image is up to date, skipping."
+    fi
+}
+
+# ── Step 1: Build release image if needed ─────────────────────────────────────
+build_if_needed "$RELEASE_IMAGE" "$RELEASE_DOCKERFILE" "release image"
+
+# ── Step 2: Build dev image if needed ─────────────────────────────────────────
+build_if_needed "$DEV_IMAGE" "$DEV_DOCKERFILE" "dev image"
+
+# ── Step 3: Start interactive container ───────────────────────────────────────
+echo ""
+echo "╔══════════════════════════════════════════════════════════╗"
+echo "║         Lumos Linux Dev Environment                      ║"
+echo "╠══════════════════════════════════════════════════════════╣"
+echo "║  Project root → /workspace                               ║"
+echo "║  ARM toolchain: arm-none-eabi-gcc --version              ║"
+echo "║                                                          ║"
+echo "║  Build lumos:                                            ║"
+echo "║    cmake -S . -B build                   \\               ║"
+echo "║      -DCMAKE_CXX_FLAGS=\"-pthread\"         \\              ║"
+echo "║      -DCMAKE_EXE_LINKER_FLAGS=\"-pthread\"                 ║"
+echo "║    cmake --build build -j\$(nproc) --target lumos_target  ║"
+echo "║                                                          ║"
+echo "║  Run lumos:                                              ║"
+echo "║    ./build/src/applications/lumos_simple/lumos --version ║"
+echo "╚══════════════════════════════════════════════════════════╝"
+echo ""
+
+docker run -it --rm \
+    --name "lumos-dev" \
+    -v "$REPO_ROOT:/workspace" \
+    -w /workspace \
+    "$DEV_IMAGE"

@@ -9,7 +9,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 HOMEBREW_REPO="$(cd "$REPO_ROOT/../homebrew-tools" && pwd)"
+SCOOP_REPO="$(cd "$REPO_ROOT/../scoop-tools" && pwd)"
 FORMULA="$HOMEBREW_REPO/Formula/lumos.rb"
+SCOOP_MANIFEST="$SCOOP_REPO/bucket/lumos.json"
 GITHUB_REPO="LumosRobotics/LumosTool"
 
 # Optional release notes passed as argument
@@ -26,6 +28,8 @@ echo "==> Version: $VERSION"
 MACOS_TARBALL="$REPO_ROOT/release/lumos-macos-${VERSION}.tar.gz"
 LINUX_TARBALL="$REPO_ROOT/release/lumos-linux-${VERSION}.tar.gz"
 LINUX_MUSL_TARBALL="$REPO_ROOT/release/lumos-linux-musl-${VERSION}.tar.gz"
+LINUX_DEB="$REPO_ROOT/release/lumos_${VERSION}_amd64.deb"
+LINUX_RPM="$REPO_ROOT/release/lumos-${VERSION}-1.x86_64.rpm"
 WINDOWS_ZIP="$REPO_ROOT/release/lumos-windows-${VERSION}.zip"
 SHA256_FILE="${MACOS_TARBALL}.sha256"
 
@@ -41,6 +45,14 @@ python3 "$SCRIPT_DIR/create_linux_release.py"
 echo ""
 echo "==> Building Linux (musl/static) release..."
 python3 "$SCRIPT_DIR/create_linux_musl_release.py"
+
+echo ""
+echo "==> Building Linux .deb package..."
+python3 "$SCRIPT_DIR/create_deb_release.py"
+
+echo ""
+echo "==> Building Linux .rpm package..."
+python3 "$SCRIPT_DIR/create_rpm_release.py"
 
 echo ""
 echo "==> Building Windows release..."
@@ -65,6 +77,8 @@ gh release create "v${VERSION}" \
     "$MACOS_TARBALL" \
     "$LINUX_TARBALL" \
     "$LINUX_MUSL_TARBALL" \
+    "$LINUX_DEB" \
+    "$LINUX_RPM" \
     "$WINDOWS_ZIP" \
     "${GH_FLAGS[@]}"
 
@@ -100,6 +114,39 @@ cd "$HOMEBREW_REPO"
 git add Formula/lumos.rb
 git commit -m "lumos ${VERSION}"
 git push
+
+# ── Step 6: Update the Scoop manifest ─────────────────────────────────────────
+echo ""
+echo "==> Updating Scoop manifest at $SCOOP_MANIFEST..."
+
+WINDOWS_SHA256=$(awk '{print $1}' "$REPO_ROOT/release/lumos-windows-${VERSION}.zip.sha256")
+
+python3 - <<PYEOF
+import json, pathlib
+
+manifest = pathlib.Path("$SCOOP_MANIFEST")
+data = json.loads(manifest.read_text())
+
+data["version"] = "$VERSION"
+data["url"]     = "https://github.com/$GITHUB_REPO/releases/download/v$VERSION/lumos-windows-$VERSION.zip"
+data["hash"]    = "$WINDOWS_SHA256"
+
+manifest.write_text(json.dumps(data, indent=4) + "\n")
+print("    manifest updated")
+PYEOF
+
+echo ""
+echo "==> Committing and pushing scoop-tools..."
+cd "$SCOOP_REPO"
+git add bucket/lumos.json
+git commit -m "lumos ${VERSION}"
+git push
+
+# ── Step 7: Submit Winget PR ───────────────────────────────────────────────────
+echo ""
+echo "==> Submitting Winget PR..."
+cd "$REPO_ROOT"
+"$SCRIPT_DIR/publish_winget" "$VERSION"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 cd "$REPO_ROOT"

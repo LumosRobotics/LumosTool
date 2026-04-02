@@ -8,6 +8,25 @@ The easiest way to install on macOS is via Homebrew:
 brew install LumosRobotics/tools/lumos
 ```
 
+## Linux — Debian/Ubuntu (.deb package)
+
+Download `lumos_{VERSION}_amd64.deb` from the [releases page](https://github.com/LumosRobotics/LumosTool/releases) and install with:
+
+```bash
+sudo dpkg -i lumos_1.0.0_amd64.deb
+```
+
+This installs `lumos` to `/usr/bin/lumos` and support files to `/usr/share/lumos/`, including the bundled ARM toolchain.
+
+## Linux — Fedora/RHEL/CentOS/openSUSE (.rpm package)
+
+Download `lumos-{VERSION}-1.x86_64.rpm` from the [releases page](https://github.com/LumosRobotics/LumosTool/releases) and install with:
+
+```bash
+sudo rpm -i lumos-1.0.0-1.x86_64.rpm          # Fedora / RHEL / CentOS
+sudo zypper install lumos-1.0.0-1.x86_64.rpm  # openSUSE
+```
+
 ## Linux and macOS — install script
 
 A script is provided that automatically detects your platform and installs the right binary.
@@ -94,16 +113,7 @@ install.bat "C:\MyTools\Lumos"
 
 ## ARM toolchain
 
-Lumos requires an ARM GCC cross-compiler to build firmware. This is **not bundled** on Linux or Windows (it is bundled on macOS).
-
-| Platform | Install command |
-|---|---|
-| Ubuntu / Debian | `sudo apt install gcc-arm-none-eabi` |
-| Fedora | `sudo dnf install arm-none-eabi-gcc-cs` |
-| Arch Linux | `sudo pacman -S arm-none-eabi-gcc` |
-| Alpine Linux | `apk add gcc-arm-none-eabi` |
-| Windows | `winget install Arm.GnuArmEmbeddedToolchain` |
-| Any | Download from [developer.arm.com](https://developer.arm.com/downloads/-/gnu-rm) |
+The ARM GCC cross-compiler (`gcc-arm-none-eabi 10.3-2021.10`) is **bundled** in all release packages — macOS, Linux, and Windows. No separate installation is required.
 
 ## Verifying your installation
 

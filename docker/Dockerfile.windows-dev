@@ -1,0 +1,18 @@
+# Development/testing environment for the Windows cross-compiled Lumos build.
+# Extends the Windows builder image (Ubuntu + MinGW-w64) with Wine so the
+# cross-compiled lumos.exe can be run and tested inside the container.
+#
+# Built and started automatically by scripts/start_testing_env_windows.
+
+FROM lumos-windows-builder
+
+RUN dpkg --add-architecture i386 \
+    && apt-get update \
+    && apt-get install -y \
+        wine64 \
+        wine32 \
+        xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+CMD ["bash"]

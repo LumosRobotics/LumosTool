@@ -15,10 +15,18 @@ import sys
 import shutil
 import subprocess
 import platform
+import urllib.request
+import tarfile
 from pathlib import Path
 
 # Configuration
 VERSION = "1.0.0"
+ARM_TOOLCHAIN_VERSION = "10.3-2021.10"
+ARM_TOOLCHAIN_NAME = f"gcc-arm-none-eabi-{ARM_TOOLCHAIN_VERSION}"
+ARM_TOOLCHAIN_LINUX_URL = (
+    f"https://developer.arm.com/-/media/Files/downloads/gnu-rm"
+    f"/{ARM_TOOLCHAIN_VERSION}/{ARM_TOOLCHAIN_NAME}-x86_64-linux.tar.bz2"
+)
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 RELEASE_DIR = PROJECT_ROOT / "release"
 PACKAGE_NAME = f"lumos-linux-{VERSION}"
@@ -132,14 +140,9 @@ def extract_binary(bin_dir):
 
     container_name = "lumos-extract-tmp"
 
-    # Remove any leftover container from a previous failed run
-    subprocess.run(
-        ["docker", "rm", "-f", container_name],
-        capture_output=True
-    )
+    subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
 
     try:
-        # Create (do not start) a container so we can copy from it
         run_command(["docker", "create", "--name", container_name, DOCKER_IMAGE])
 
         lumos_bin = bin_dir / "lumos"
@@ -148,7 +151,6 @@ def extract_binary(bin_dir):
         )
         lumos_bin.chmod(0o755)
 
-        # Verify the binary exists and is an ELF
         result = run_command(["file", str(lumos_bin)])
         print(f"  {result.stdout.strip()}")
 
@@ -160,8 +162,37 @@ def extract_binary(bin_dir):
         return lumos_bin
 
     finally:
-        # Always clean up the temporary container
         subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+
+def download_arm_toolchain(share_dir):
+    """Download the official ARM GCC toolchain for Linux x86_64 and bundle it"""
+    print_step("Downloading ARM GCC Toolchain (Linux x86_64)")
+
+    toolchain_dir = share_dir / "toolchains"
+    toolchain_dir.mkdir(parents=True, exist_ok=True)
+
+    tarball_path = toolchain_dir / f"{ARM_TOOLCHAIN_NAME}-x86_64-linux.tar.bz2"
+
+    print(f"Downloading {ARM_TOOLCHAIN_LINUX_URL} ...")
+
+    def progress(count, block_size, total_size):
+        mb_done = count * block_size / (1024 * 1024)
+        mb_total = total_size / (1024 * 1024)
+        print(f"  {mb_done:.1f} / {mb_total:.1f} MB\r", end="", flush=True)
+
+    urllib.request.urlretrieve(ARM_TOOLCHAIN_LINUX_URL, tarball_path, reporthook=progress)
+    print()
+
+    print(f"Extracting {tarball_path.name} ...")
+    with tarfile.open(tarball_path, "r:bz2") as tf:
+        tf.extractall(toolchain_dir)
+    tarball_path.unlink()
+
+    size_mb = sum(
+        f.stat().st_size for f in (toolchain_dir / ARM_TOOLCHAIN_NAME).rglob("*") if f.is_file()
+    ) / (1024 * 1024)
+    print(f"✓ ARM toolchain bundled: {ARM_TOOLCHAIN_NAME} ({size_mb:.0f} MB)")
 
 
 def create_package_structure():
@@ -406,6 +437,7 @@ def main():
         bin_dir, share_dir = create_package_structure()
 
         extract_binary(bin_dir)
+        download_arm_toolchain(share_dir)
         copy_resources(share_dir)
         create_install_script()
         create_readme()

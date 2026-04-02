@@ -32,13 +32,15 @@ COPY src/                           src/
 COPY CMakeLists.txt                 .
 
 # ── Build yaml-cpp for Windows ────────────────────────────────────────────────
-RUN cmake -S third_party/yaml-cpp -B third_party/yaml-cpp/build \
+# Remove any stale cache copied from the host (build dir paths differ).
+RUN rm -rf third_party/yaml-cpp/build_windows \
+    && cmake -S third_party/yaml-cpp -B third_party/yaml-cpp/build_windows \
         -DCMAKE_TOOLCHAIN_FILE=/toolchain.cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DYAML_CPP_BUILD_TESTS=OFF \
         -DYAML_CPP_BUILD_TOOLS=OFF \
         -DYAML_BUILD_SHARED_LIBS=OFF \
-    && cmake --build third_party/yaml-cpp/build -j"$(nproc)"
+    && cmake --build third_party/yaml-cpp/build_windows -j"$(nproc)"
 
 # ── Build lumos.exe ───────────────────────────────────────────────────────────
 RUN cmake -S . -B build \

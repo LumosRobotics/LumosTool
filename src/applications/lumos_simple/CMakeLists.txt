@@ -16,9 +16,22 @@ set(LUMOS_SOURCES
 # in-tree submodule build for the Docker / macOS dev workflow.
 find_package(yaml-cpp QUIET)
 
-if(NOT yaml-cpp_FOUND)
+# Older distro packages (e.g. Ubuntu 22.04 yaml-cpp 0.7) create a plain
+# 'yaml-cpp' target without the namespace. Alias it so the rest of the build
+# can always use 'yaml-cpp::yaml-cpp'.
+if(yaml-cpp_FOUND AND NOT TARGET yaml-cpp::yaml-cpp AND TARGET yaml-cpp)
+    add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
+endif()
+
+if(NOT TARGET yaml-cpp::yaml-cpp)
     set(_YAML_INC "${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/include")
-    set(_YAML_LIB "${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/build/libyaml-cpp.a")
+    # Use a platform-specific build directory so macOS, Linux, and Windows
+    # submodule builds don't overwrite each other.
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(_YAML_LIB "${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/build_windows/libyaml-cpp.a")
+    else()
+        set(_YAML_LIB "${CMAKE_SOURCE_DIR}/third_party/yaml-cpp/build/libyaml-cpp.a")
+    endif()
 
     if(EXISTS "${_YAML_LIB}")
         message(STATUS "yaml-cpp: using submodule build at ${_YAML_LIB}")
